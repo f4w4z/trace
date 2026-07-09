@@ -1,0 +1,32 @@
+{
+  "name": "smt",
+  "version": "0.1.0",
+  "description": "Local Context Cloud — OS-level memory layer using Supermemory Local (localhost:6767)",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsx watch src/index.ts",
+    "lint": "tsc --noEmit",
+    "hud": "node dist/index.js --hud-only",
+    "app": "electron app/main.cjs"
+  },
+  "dependencies": {
+    "chokidar": "^4.0.3",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "node-fetch": "^3.3.2",
+    "sql.js": "^1.14.1",
+    "ws": "^8.18.1"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.1",
+    "@types/node": "^22.14.1",
+    "@types/sql.js": "^1.4.11",
+    "@types/ws": "^8.18.1",
+    "electron": "^43.1.0",
+    "tsx": "^4.19.3",
+    "typescript": "^5.8.3"
+  }
+}

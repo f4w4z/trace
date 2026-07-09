@@ -1,0 +1,258 @@
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --bg: #0d1117;
+  --surface: #161b22;
+  --border: #30363d;
+  --text: #e6edf3;
+  --dim: #8b949e;
+  --accent: #58a6ff;
+  --accent-dim: #1f6feb;
+  --success: #3fb950;
+  --warning: #d29922;
+  --error: #f85149;
+  --radius: 8px;
+  --font: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --mono: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  line-height: 1.5;
+  width: 100vw;
+  height: 100vh;
+  overflow-y: auto;
+}
+
+#app {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+header h1 {
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.3px;
+}
+
+#status {
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--dim);
+}
+
+#status.connected {
+  color: var(--success);
+  border-color: var(--success);
+}
+
+#search-container {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+#search-input {
+  flex: 1;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 14px;
+  font-family: var(--font);
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+#search-input:focus {
+  border-color: var(--accent);
+}
+
+#search-btn {
+  padding: 8px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+  font-size: 14px;
+}
+
+#search-btn:hover {
+  border-color: var(--accent);
+}
+
+#llm-toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--dim);
+  cursor: pointer;
+}
+
+#llm-toggle {
+  accent-color: var(--accent);
+}
+
+#results {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+#timeline, #summary {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+}
+
+h2 {
+  font-size: 14px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--dim);
+  margin-bottom: 16px;
+}
+
+.session {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.session:last-child {
+  border-bottom: none;
+}
+
+.session-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.session-project {
+  font-weight: 600;
+  color: var(--accent);
+  font-size: 14px;
+}
+
+.session-time {
+  font-size: 12px;
+  color: var(--dim);
+  font-family: var(--mono);
+}
+
+.session-summary {
+  font-size: 13px;
+  color: var(--text);
+}
+
+.session-summary ul {
+  list-style: none;
+  padding-left: 0;
+}
+
+.session-summary li {
+  padding: 2px 0;
+  font-size: 13px;
+}
+
+.session-summary li::before {
+  content: '·';
+  color: var(--accent);
+  margin-right: 8px;
+}
+
+.event-count {
+  font-size: 12px;
+  color: var(--dim);
+}
+
+.bullet-list {
+  list-style: none;
+}
+
+.bullet-list li {
+  padding: 4px 0;
+  font-size: 13px;
+}
+
+.bullet-list li::before {
+  content: '▸';
+  color: var(--accent);
+  margin-right: 8px;
+}
+
+#query-results {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  margin-top: 24px;
+}
+
+#query-results.hidden {
+  display: none;
+}
+
+.memory-item {
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+}
+
+.memory-item:last-child {
+  border-bottom: none;
+}
+
+.memory-source {
+  font-size: 11px;
+  color: var(--dim);
+  font-family: var(--mono);
+  margin-top: 2px;
+}
+
+.llm-answer {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px;
+  margin-bottom: 12px;
+  font-size: 14px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+.empty-state {
+  color: var(--dim);
+  font-size: 13px;
+  text-align: center;
+  padding: 24px 0;
+}
+
+.loading {
+  color: var(--dim);
+  font-size: 13px;
+  text-align: center;
+  padding: 12px;
+}

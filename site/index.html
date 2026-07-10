@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>trace - local context cloud</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #0a0a0a;
+  color: #d4d4d4;
+  font-family: 'Inter', sans-serif;
+  font-weight: 400;
+  font-size: 14px;
+  line-height: 1.6;
+  padding: 80px 24px;
+  max-width: 680px;
+  margin: 0 auto;
+}
+header { margin-bottom: 64px; }
+h1 {
+  font-size: 20px;
+  font-weight: 500;
+  color: #f0f0f0;
+  letter-spacing: -0.3px;
+  margin-bottom: 8px;
+}
+h1 span { font-weight: 300; color: #666; }
+p {
+  color: #888;
+  max-width: 520px;
+}
+a { color: #888; text-decoration: none; border-bottom: 1px solid #222; }
+a:hover { color: #d4d4d4; border-color: #555; }
+.section-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: #444;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  margin-bottom: 24px;
+}
+.timeline { margin-bottom: 64px; }
+.entry {
+  display: flex;
+  gap: 16px;
+  padding: 12px 0;
+  border-bottom: 1px solid #141414;
+}
+.entry:last-child { border-bottom: none; }
+.entry-date {
+  font-size: 12px;
+  color: #555;
+  width: 80px;
+  flex-shrink: 0;
+  padding-top: 1px;
+}
+.entry-desc {
+  font-size: 13px;
+  color: #b0b0b0;
+}
+.entry-desc strong {
+  font-weight: 500;
+  color: #e0e0e0;
+}
+.arch-section { margin-bottom: 48px; }
+.arch-item {
+  display: flex;
+  gap: 16px;
+  padding: 8px 0;
+}
+.arch-item .label {
+  font-size: 12px;
+  color: #555;
+  width: 80px;
+  flex-shrink: 0;
+}
+.arch-item .desc { font-size: 13px; color: #999; }
+footer {
+  margin-top: 80px;
+  font-size: 12px;
+  color: #444;
+}
+footer a { font-size: 12px; }
+</style>
+</head>
+<body>
+
+<header>
+<h1>trace <span>local context cloud</span></h1>
+<p>An OS-level memory layer that captures computer activity and indexes it with <a href="https://supermemory.ai">Supermemory</a> for AI-powered recall.</p>
+</header>
+
+<div class="section-label">Architecture</div>
+
+<div class="arch-section">
+<div class="arch-item"><div class="label">Daemon</div><div class="desc">Persistent PowerShell tracker captures foreground windows, browser URLs, process snapshots, and idle state on a 3-second loop. File watcher monitors create/edit events. Editor detector identifies active projects.</div></div>
+<div class="arch-item"><div class="label">Storage</div><div class="desc">All events written to <code>~/.trace/events.jsonl</code> and fire-and-forget posted to Supermemory Local (localhost:6767) for vector indexing and hybrid search. Falls back to local-only when Supermemory is unreachable.</div></div>
+<div class="arch-item"><div class="label">API</div><div class="desc">Express server on port 6768 with REST endpoints for context, search, and daily summaries. MCP-compatible tools for AI agent integration. LLM-powered Q&A via any OpenAI-compatible endpoint.</div></div>
+<div class="arch-item"><div class="label">Overlay</div><div class="desc">Frameless Electron window (Alt+X) with chat-style search bar and activity feed. Web-based HUD dashboard on port 6769 for live session tracking.</div></div>
+</div>
+
+<div class="section-label">Updates</div>
+
+<div class="timeline">
+<div class="entry"><div class="entry-date">Jul 11</div><div class="entry-desc"><strong>v0.1.0</strong> Renamed from smt to trace. Single-instance lock prevents duplicate launches. Local store scans all events for search. Supermemory uses v3/search with remoteOk flag. Chat-style overlay with logo in tray, search bar, spinner, HUD, and favicon. Comprehensive README.</div></div>
+<div class="entry"><div class="entry-date">Jul 11</div><div class="entry-desc"><strong>Chat AI</strong> Logo-based typing spinner. Escape returns to home. LLM context includes recent events. Blur debounce at 300ms prevents accidental close.</div></div>
+<div class="entry"><div class="entry-date">Jul 11</div><div class="entry-desc"><strong>Search & AI</strong> Chat-style search bar with Enter to query, AI Q&A mode, message bubbles, and logo in the search field.</div></div>
+<div class="entry"><div class="entry-date">Jul 11</div><div class="entry-desc"><strong>Unified Tracker</strong> Single persistent PowerShell process replaces separate activity.ts and browser.ts. Captures foreground, browser URLs, process snapshots, and idle detection on a 3-second loop with auto-restart.</div></div>
+<div class="entry"><div class="entry-date">Jul 11</div><div class="entry-desc"><strong>Startup scripts</strong> start.bat and start.vbs for one-click launch with hidden windows.</div></div>
+<div class="entry"><div class="entry-date">Jul 10</div><div class="entry-desc"><strong>Redesign</strong> Electron overlay redesigned with greeting message, background fetch of events, and close-out animation. Summary endpoint with 5-minute cache and LLM-powered summaries.</div></div>
+<div class="entry"><div class="entry-date">Jul 10</div><div class="entry-desc"><strong>Electron overlay</strong> Native frameless window with Spotlight-style appearance. Context API with MCP tool support. HUD server for web-based monitoring.</div></div>
+<div class="entry"><div class="entry-date">Jul 9</div><div class="entry-desc"><strong>HUD overlay</strong> Dark-themed web dashboard with live activity feed, session timeline, and search.</div></div>
+<div class="entry"><div class="entry-date">Jul 8</div><div class="entry-desc"><strong>Initial</strong> Daemon watchers for filesystem, editor, and terminal. Supermemory client with local fallback.</div></div>
+</div>
+
+<footer>
+<p><a href="https://github.com/f4w4z/trace">GitHub</a> &middot; <a href="https://supermemory.ai">Supermemory</a></p>
+</footer>
+
+</body>
+</html>

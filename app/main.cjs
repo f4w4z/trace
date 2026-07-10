@@ -47,14 +47,16 @@ function createWindow() {
     width: winWidth,
     height: winHeight,
     x: Math.round((width - winWidth) / 2),
-    y: Math.round(height * 0.12),
+    y: Math.round(height * 0.1),
     frame: false,
     transparent: true,
+    backgroundColor: '#00000000',
     resizable: false,
     skipTaskbar: true,
     alwaysOnTop: true,
-    show: true,
+    show: false,
     hasShadow: false,
+    thickFrame: false,
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
       contextIsolation: true,
@@ -62,10 +64,15 @@ function createWindow() {
     },
   })
 
+  win.setBackgroundColor('#00000000')
+  win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
+
   win.loadFile(path.join(__dirname, 'index.html'))
 
   win.on('blur', () => {
-    if (win && win.isVisible()) win.hide()
+    if (win && win.isVisible()) {
+      win.webContents.send('blur-hide')
+    }
   })
 
   win.on('closed', () => { win = null })
@@ -105,10 +112,20 @@ app.whenReady().then(async () => {
   createWindow()
   createTray()
 
-  globalShortcut.register('Alt+X', toggleWindow)
+  const registered = globalShortcut.register('Alt+X', toggleWindow)
+  if (!registered) {
+    console.error('Alt+X shortcut registration failed, trying Alt+Space...')
+    globalShortcut.register('Alt+Space', toggleWindow)
+  }
 
   ipcMain.handle('open-url', async (_, url) => {
     if (url && !url.startsWith('file://')) shell.openExternal(url)
+  })
+
+  ipcMain.handle('get-username', () => process.env.USERNAME || 'there')
+
+  ipcMain.on('hide-window', () => {
+    if (win && win.isVisible()) win.hide()
   })
 
   ipcMain.handle('api-request', async (_, method, endpoint, body) => {

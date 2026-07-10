@@ -5,6 +5,7 @@ import { FilesystemWatcher } from './filesystem.js'
 import { BrowserWatcher } from './browser.js'
 import { EditorWatcher } from './editor.js'
 import { TerminalWatcher } from './terminal.js'
+import { ActivityTracker } from './activity.js'
 
 export class Daemon {
   private config: Config
@@ -13,6 +14,7 @@ export class Daemon {
   private browser: BrowserWatcher
   private editor: EditorWatcher
   private terminal: TerminalWatcher
+  private activity: ActivityTracker
   private running = false
 
   constructor(config: Config, client: SupermemoryClient) {
@@ -22,6 +24,7 @@ export class Daemon {
     this.browser = new BrowserWatcher(client)
     this.editor = new EditorWatcher(client)
     this.terminal = new TerminalWatcher(client)
+    this.activity = new ActivityTracker(client)
   }
 
   start(): void {
@@ -30,6 +33,8 @@ export class Daemon {
 
     logger.info(`daemon starting — containerTag: ${this.config.containerTag}`)
     logger.info(`sources: ${this.config.watchSources.join(', ')}`)
+
+    this.activity.start()
 
     if (this.config.watchSources.includes('filesystem')) {
       this.filesystem.start(this.config.watchPaths)
@@ -55,6 +60,7 @@ export class Daemon {
     if (!this.running) return
     this.running = false
     logger.info('stopping daemon...')
+    this.activity.stop()
     this.filesystem.stop()
     this.browser.stop()
     this.editor.stop()

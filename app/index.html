@@ -2,35 +2,183 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>smt</title>
-<link rel="stylesheet" href="style.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  background: transparent;
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+#overlay {
+  width: 100vw; height: 100vh;
+  display: flex; justify-content: center;
+  padding-top: 10vh;
+  background: transparent;
+}
+#window {
+  width: 620px;
+  max-height: 440px;
+  background: rgba(22,22,26,0.94);
+  backdrop-filter: blur(40px) saturate(1.4);
+  -webkit-backdrop-filter: blur(40px) saturate(1.4);
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,0.06);
+  box-shadow: 0 24px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.03) inset;
+  display: flex; flex-direction: column;
+  overflow: hidden;
+  animation: popIn 0.2s cubic-bezier(0.16,1,0.3,1);
+}
+@keyframes popIn {
+  from { opacity: 0; transform: scale(0.96) translateY(-12px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+@keyframes popOut {
+  from { opacity: 1; transform: scale(1); }
+  to { opacity: 0; transform: scale(0.96) translateY(-8px); }
+}
+#search-row {
+  display: flex; align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+#search-icon {
+  width: 18px; height: 18px;
+  color: rgba(255,255,255,0.25);
+  flex-shrink: 0; margin-right: 12px;
+  transition: color 0.2s;
+}
+#search-row:focus-within #search-icon { color: #6c8cff; }
+#search-input {
+  flex: 1;
+  background: none; border: none; outline: none;
+  color: #fff;
+  font-size: 17px;
+  font-weight: 400;
+  letter-spacing: -0.3px;
+  font-family: inherit;
+}
+#search-input::placeholder { color: rgba(255,255,255,0.2); }
+#results {
+  flex: 1; overflow-y: auto;
+  min-height: 60px;
+  scroll-behavior: smooth;
+}
+#results::-webkit-scrollbar { width: 4px; }
+#results::-webkit-scrollbar-track { background: transparent; }
+#results::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 2px; }
+#empty-state {
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: 36px 20px;
+  color: rgba(255,255,255,0.2);
+  font-size: 13px; gap: 10px;
+  animation: fadeIn 0.3s ease;
+}
+#empty-state svg { width: 32px; height: 32px; opacity: 0.4; }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.section { padding: 6px 0; }
+.section-header {
+  padding: 8px 20px 6px;
+  font-size: 10.5px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.6px;
+  color: rgba(255,255,255,0.2);
+}
+.result-item {
+  display: flex; align-items: flex-start;
+  padding: 9px 20px;
+  cursor: pointer;
+  transition: background 0.12s ease;
+  gap: 10px;
+  animation: slideUp 0.2s ease both;
+}
+.result-item:hover, .result-item.selected { background: rgba(255,255,255,0.04); }
+.result-icon {
+  width: 28px; height: 28px;
+  border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; font-size: 13px;
+  margin-top: 1px;
+  transition: transform 0.15s ease;
+}
+.result-item:hover .result-icon { transform: scale(1.08); }
+.result-icon.filesystem { background: rgba(90,200,250,0.1); color: #5ac8fa; }
+.result-icon.browser { background: rgba(100,210,255,0.1); color: #64d2ff; }
+.result-icon.editor { background: rgba(175,130,255,0.1); color: #af82ff; }
+.result-icon.terminal { background: rgba(50,215,75,0.1); color: #32d74b; }
+.result-icon.system { background: rgba(255,159,10,0.1); color: #ff9f0a; }
+.result-body { flex: 1; min-width: 0; }
+.result-title {
+  font-size: 13.5px;
+  color: #fff;
+  line-height: 1.3;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  font-weight: 450;
+}
+.result-detail {
+  font-size: 11.5px;
+  color: rgba(255,255,255,0.3);
+  margin-top: 1px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.result-time {
+  font-size: 11px;
+  color: rgba(255,255,255,0.15);
+  white-space: nowrap; flex-shrink: 0;
+  padding-top: 2px;
+  font-variant-numeric: tabular-nums;
+}
+#footer {
+  display: flex; gap: 16px;
+  padding: 8px 20px;
+  border-top: 1px solid rgba(255,255,255,0.04);
+  font-size: 11px;
+  color: rgba(255,255,255,0.15);
+}
+kbd {
+  display: inline-block;
+  padding: 1px 5px;
+  font-size: 10px;
+  font-family: inherit;
+  background: rgba(255,255,255,0.05);
+  border-radius: 3px;
+  border: 1px solid rgba(255,255,255,0.06);
+  margin: 0 1px;
+  color: rgba(255,255,255,0.25);
+}
+</style>
 </head>
 <body>
 <div id="overlay">
   <div id="window">
     <div id="search-row">
       <svg id="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <circle cx="11" cy="11" r="8"/>
-        <path d="m21 21-4.35-4.35"/>
+        <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
       </svg>
       <input id="search-input" type="text" placeholder="Search your context..." spellcheck="false" autofocus>
     </div>
     <div id="results">
+      <div id="active-section" class="section">
+        <div class="section-header">Active Session</div>
+        <div id="active-list"></div>
+      </div>
+      <div id="search-section" class="section" style="display:none">
+        <div class="section-header">Search</div>
+        <div id="search-list"></div>
+      </div>
       <div id="empty-state">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.3">
-          <path d="M12 2a10 10 0 1 0 10 10"/>
-          <path d="M12 6v6l4 2"/>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M12 2a10 10 0 1 0 10 10"/><path d="M12 6v6l4 2"/>
         </svg>
         <span>Start typing to search your memories</span>
-      </div>
-      <div id="active-session" class="section">
-        <div class="section-header">Active Session</div>
-        <div id="active-session-content"></div>
-      </div>
-      <div id="search-results" class="section" style="display:none">
-        <div class="section-header">Results</div>
-        <div id="search-results-list"></div>
       </div>
     </div>
     <div id="footer">

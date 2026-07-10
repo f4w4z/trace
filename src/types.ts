@@ -9,6 +9,13 @@ export type EventType =
   | 'commit_made'
   | 'command_run'
   | 'error_logged'
+  | 'app_focused'
+  | 'app_closed'
+  | 'idle_start'
+  | 'idle_end'
+  | 'browser_tab_switch'
+  | 'browser_scroll'
+  | 'browser_focus'
 
 export interface Event {
   id?: string

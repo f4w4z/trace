@@ -1,45 +1,64 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Day HUD — smt</title>
-  <link rel="stylesheet" href="style.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<title>smt · context</title>
+<link rel="stylesheet" href="style.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
   <div id="app">
     <header>
-      <h1>Day HUD</h1>
-      <div id="status"></div>
+      <div class="logo"><span class="logo-icon">◈</span> smt <span class="logo-sub">context</span></div>
+      <div class="header-actions">
+        <span id="index-badge" class="badge pulse">indexing...</span>
+        <span id="mem-count" class="badge">0</span>
+      </div>
     </header>
 
     <div id="search-container">
-      <input type="text" id="search-input" placeholder="Search activity or ask a question..."
-        autofocus spellcheck="false">
-      <button id="search-btn" title="Search">&#x1F50D;</button>
-      <label id="llm-toggle-label">
-        <input type="checkbox" id="llm-toggle">
-        LLM
-      </label>
+      <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+      </svg>
+      <input id="search" type="text" placeholder="Search everything..." autofocus>
+      <div id="search-shortcut"><kbd>/</kbd></div>
     </div>
 
-    <div id="results">
-      <div id="timeline">
-        <h2>Today's Timeline</h2>
-        <div id="timeline-content"></div>
+    <div id="content">
+      <div id="timeline-section">
+        <div class="section-title">Active Session</div>
+        <div id="session-bar">
+          <div class="session-label">Now</div>
+          <div id="live-indicator"><span class="dot"></span> recording</div>
+        </div>
+        <div id="active-events"></div>
       </div>
-      <div id="summary">
-        <h2>Daily Summary</h2>
-        <div id="summary-content"></div>
+
+      <div id="results-section" class="hidden">
+        <div class="section-title">Results</div>
+        <div id="results-list"></div>
       </div>
     </div>
 
-    <div id="query-results" class="hidden">
-      <h2>Results</h2>
-      <div id="query-content"></div>
+    <div id="empty-state" class="hidden">
+      <svg viewBox="0 0 80 80" fill="none">
+        <circle cx="40" cy="40" r="36" stroke="currentColor" stroke-width="1" opacity="0.1"/>
+        <path d="M40 20v20l12 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" opacity="0.2"/>
+      </svg>
+      <p>Your activity will appear here</p>
     </div>
+
+    <footer>
+      <div class="footer-items">
+        <span class="footer-item"><kbd>↑</kbd><kbd>↓</kbd> navigate</span>
+        <span class="footer-item"><kbd>⏎</kbd> open url</span>
+        <span class="footer-item"><kbd>Esc</kbd> clear</span>
+      </div>
+      <div class="status-dot" id="status-dot" title="Supermemory connected"></div>
+    </footer>
   </div>
-
-  <script src="app.js"></script>
+<script src="app.js"></script>
 </body>
 </html>

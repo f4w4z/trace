@@ -28,27 +28,22 @@ export class SupermemoryClient {
   }
 
   async addDocument(event: Event): Promise<string | null> {
-    if (this.remoteOk) {
-      const id = await this.remoteAdd(event)
-      if (id !== null) return id
-    }
     await this.local.append(event)
+    if (this.remoteOk) {
+      this.remoteAdd(event).catch(() => {})
+    }
     return event.id ?? null
   }
 
   async searchV4(query: string, limit = 20): Promise<SupermemoryMemory[]> {
     if (this.remoteOk) {
       const results = await this.remoteSearch(query, limit)
-      if (results !== null) return results
+      if (results !== null && results.length > 0) return results
     }
     return this.local.search(query, limit)
   }
 
   async listDocuments(limit = 100, _page = 1): Promise<SupermemoryMemory[]> {
-    if (this.remoteOk) {
-      const docs = await this.remoteList(limit)
-      if (docs !== null) return docs
-    }
     return this.local.list(limit)
   }
 

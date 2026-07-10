@@ -32,8 +32,8 @@ export class ContextService {
   }
 
   async queryWithLLM(query: string, llmUrl?: string, llmModel?: string, llmApiKey?: string): Promise<QueryResult> {
-    const results = (await this.client.searchQuery(query, 10)).filter(d => !this.isSummary(d))
-    const recent = (await this.client.listDocuments(25)).filter(d => !this.isSummary(d))
+    const results = (await this.client.searchQuery(query, 30)).filter(d => !this.isSummary(d))
+    const recent = (await this.client.listDocuments(500)).filter(d => !this.isSummary(d))
     const seen = new Set(results.map(r => r.id))
     const combined = [...results, ...recent.filter(r => !seen.has(r.id))]
     let answer: string | undefined
@@ -64,7 +64,7 @@ export class ContextService {
       return { ...this.summaryCache, cached: true }
     }
 
-    const docs = await this.client.listDocuments(100)
+    const docs = await this.client.listDocuments(1000)
     const twoHrsAgo = new Date(now - 2 * 60 * 60 * 1000)
     const recent = docs.filter(d => {
       if (this.isSummary(d)) return false

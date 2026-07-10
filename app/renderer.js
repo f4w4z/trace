@@ -85,10 +85,10 @@ function renderSummary(data) {
   summary.classList.add('visible')
 }
 
-function escape(s) {
+function escape(s, max) {
   if (!s) return ''
   const d = document.createElement('div')
-  d.textContent = String(s).slice(0, 200)
+  d.textContent = max ? String(s).slice(0, max) : String(s)
   return d.innerHTML
 }
 

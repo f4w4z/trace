@@ -172,6 +172,46 @@ input.addEventListener('keydown', (e) => {
 
 sendBtn.addEventListener('click', () => sendMessage())
 
+const COMMANDS = {
+  help: { desc: 'Show available commands' },
+  restart: { desc: 'Restart the entire app' },
+  'restart-server': { desc: 'Restart the trace server only' },
+  clear: { desc: 'Delete all stored memories' },
+  status: { desc: 'Show daemon and supermemory status' },
+}
+
+async function handleCommand(cmd) {
+  const parts = cmd.slice(1).trim().split(/\s+/)
+  const name = parts[0]
+  const args = parts.slice(1)
+
+  if (name === 'help' || !name) {
+    const lines = Object.entries(COMMANDS).map(([k, v]) => `<code>/${k}</code> - ${v.desc}`)
+    return `<div style="font-size:13px;line-height:1.8">Available commands:<br>${lines.join('<br>')}</div>`
+  }
+
+  if (!COMMANDS[name]) {
+    return `Unknown command: <code>/${name}</code>. Type <code>/help</code> for available commands.`
+  }
+
+  switch (name) {
+    case 'restart':
+    case 'restart-server':
+      return await window.trace.execCommand(name)
+    case 'clear': {
+      const result = await window.trace.api('DELETE', '/admin/memories')
+      return result?.cleared ? 'All memories deleted.' : 'Failed to clear memories.'
+    }
+    case 'status': {
+      const s = await window.trace.api('GET', '/admin/status')
+      if (!s) return 'Server unreachable.'
+      return `Status: <b>${s.status}</b><br>Daemon: <b>${s.daemon ? 'running' : 'stopped'}</b><br>Supermemory: <b>${s.supermemory ? 'connected' : 'disconnected'}</b><br>Container: <code>${s.containerTag}</code>`
+    }
+    default:
+      return `Unknown command: /${name}`
+  }
+}
+
 async function sendMessage() {
   const q = input.value.trim()
   if (!q) return
@@ -182,6 +222,14 @@ async function sendMessage() {
   addUserMsg(q)
   showTyping()
   scrollToBottom()
+
+  if (q.startsWith('/')) {
+    const reply = await handleCommand(q)
+    hideTyping()
+    addAiMsg(reply, [])
+    scrollToBottom()
+    return
+  }
 
   const data = await window.trace.api('GET', `/context/query?q=${encodeURIComponent(q)}&llm=true`)
   hideTyping()

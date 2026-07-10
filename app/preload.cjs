@@ -8,4 +8,5 @@ contextBridge.exposeInMainWorld('trace', {
   username: () => ipcRenderer.invoke('get-username'),
   hideWindow: () => ipcRenderer.send('hide-window'),
   getIcon: () => ipcRenderer.invoke('get-icon'),
+  execCommand: (cmd) => ipcRenderer.invoke('exec-command', cmd),
 })

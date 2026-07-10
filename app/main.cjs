@@ -163,6 +163,28 @@ app.whenReady().then(async () => {
     if (win && win.isVisible()) win.hide()
   })
 
+  ipcMain.handle('exec-command', async (_, cmd) => {
+    switch (cmd) {
+      case 'restart': {
+        spawn('cmd', ['/c', 'start', '', path.join(__dirname, '..', 'start.bat')], {
+          detached: true, stdio: 'ignore', windowsHide: true,
+        }).unref()
+        app.quit()
+        return 'Restarting...'
+      }
+      case 'restart-server': {
+        if (serverProcess) {
+          serverProcess.kill()
+          serverProcess = null
+        }
+        ensureServer()
+        return 'Server restarted'
+      }
+      default:
+        return `Unknown command: ${cmd}`
+    }
+  })
+
   ipcMain.handle('api-request', async (_, method, endpoint, body) => {
     return new Promise((resolve) => {
       const opts = {

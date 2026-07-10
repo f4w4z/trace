@@ -47,10 +47,16 @@ function renderEvent(e, index) {
   </div>`
 }
 
+let lastSessionKey = ''
+
 async function loadSession() {
   const data = await api('/context/current')
   if (!data) return
   const events = data.recentEvents || []
+  const key = events.map(e => e.id ?? e.content).join('|')
+  if (key === lastSessionKey) return
+  lastSessionKey = key
+
   const container = $('#active-events')
   if (!events.length) {
     container.innerHTML = '<div style="color:var(--text3);padding:12px;text-align:center;font-size:12px">No recent activity</div>'
@@ -127,17 +133,21 @@ $('#search').addEventListener('keydown', (e) => {
 // Polling
 async function poll() {
   const health = await api('/health')
-  const dot = $('#status-dot')
   if (health) {
-    dot.className = 'status-dot' + (health.supermemory ? '' : ' degraded')
-    if (health.supermemory) {
-      $('#index-badge').textContent = 'live'
-      $('#index-badge').classList.remove('pulse')
+    const dot = $('#status-dot')
+    const cls = 'status-dot' + (health.supermemory ? '' : ' degraded')
+    if (dot.className !== cls) dot.className = cls
+    const badge = $('#index-badge')
+    if (health.supermemory && badge.textContent !== 'live') {
+      badge.textContent = 'live'
+      badge.classList.remove('pulse')
     }
   }
   const data = await api('/admin/status')
   if (data) {
-    $('#mem-count').textContent = data.memoryCount ?? '?'
+    const mc = $('#mem-count')
+    const v = String(data.memoryCount ?? '?')
+    if (mc.textContent !== v) mc.textContent = v
   }
   await loadSession()
 }

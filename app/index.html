@@ -227,8 +227,8 @@ html, body {
   padding: 10px 22px;
   animation: slideIn 0.2s ease both;
 }
-.typing-dots {
-  display: inline-flex; gap: 4px; align-items: center;
+.typing-line {
+  display: inline-flex; gap: 10px; align-items: center;
   padding: 12px 16px;
   background: rgba(255,255,255,0.02);
   border: 1px solid rgba(255,255,255,0.04);
@@ -238,23 +238,20 @@ html, body {
 .typing-logo {
   width: 16px; height: 16px;
   border-radius: 4px;
-  animation: logoSpin 1s linear infinite;
 }
-@keyframes logoSpin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+.shimmer {
+  font-size: 13px;
+  color: rgba(255,255,255,0.2);
+  background: linear-gradient(90deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0.6) 50%, rgba(255,255,255,0.2) 100%);
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: shimmer 1.8s ease-in-out infinite;
 }
-.typing-dots span {
-  width: 6px; height: 6px;
-  border-radius: 50%;
-  background: rgba(255,255,255,0.15);
-  animation: typingBounce 1.2s ease-in-out infinite;
-}
-.typing-dots span:nth-child(2) { animation-delay: 0.2s; }
-.typing-dots span:nth-child(3) { animation-delay: 0.4s; }
-@keyframes typingBounce {
-  0%, 60%, 100% { transform: translateY(0); }
-  30% { transform: translateY(-5px); }
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
 }
 #footer {
   display: flex; gap: 14px;

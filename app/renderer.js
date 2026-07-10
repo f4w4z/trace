@@ -252,8 +252,8 @@ function showTyping() {
   el.id = 'typing-indicator'
   const logo = iconDataUrl
     ? `<img class="typing-logo" src="${iconDataUrl}">`
-    : '<span style="opacity:0.2;font-size:11px">⚡</span>'
-  el.innerHTML = `<div class="typing-dots">${logo}<span></span><span></span><span></span></div>`
+    : ''
+  el.innerHTML = `<div class="typing-line">${logo}<span class="shimmer">thinking</span></div>`
   chat.appendChild(el)
 }
 

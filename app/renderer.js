@@ -134,6 +134,7 @@ function closeWindow() {
   }, { once: true })
 }
 
+loadHistory()
 pollEvents()
 pollSummary()
 setInterval(pollEvents, 5000)
@@ -244,32 +245,33 @@ async function sendMessage() {
   scrollToBottom()
 }
 
-function enterChat() {
-  chatMode = true
-  summary.classList.remove('visible')
-  events.style.display = 'none'
-  chat.style.display = 'flex'
-  chat.innerHTML = ''
-  chatHistory = []
+async function saveHistory() {
+  await window.trace.saveChat(chatHistory)
 }
 
-function exitChat() {
-  chatMode = false
-  chat.style.display = 'none'
-  events.style.display = ''
-  summary.classList.remove('hidden')
-  renderSummary(lastSummary)
-  renderEvents()
+async function loadHistory() {
+  const saved = await window.trace.loadChat()
+  if (saved && saved.length) {
+    chatHistory = saved
+    enterChat()
+    for (const msg of chatHistory) {
+      if (msg.role === 'user') {
+        renderUserMsg(msg.text)
+      } else {
+        renderAiMsg(msg.text, msg.memories || [], msg.raw)
+      }
+    }
+  }
 }
 
-function addUserMsg(text) {
+function renderUserMsg(text) {
   const el = document.createElement('div')
   el.className = 'chat-msg user'
   el.innerHTML = `<div class="chat-bubble">${escape(text)}</div>`
   chat.appendChild(el)
 }
 
-function addAiMsg(text, memories, raw) {
+function renderAiMsg(text, memories, raw) {
   const el = document.createElement('div')
   el.className = 'chat-msg ai'
   let html = raw
@@ -294,6 +296,34 @@ function addAiMsg(text, memories, raw) {
   }
   el.innerHTML = html
   chat.appendChild(el)
+}
+
+function enterChat() {
+  chatMode = true
+  summary.classList.remove('visible')
+  events.style.display = 'none'
+  chat.style.display = 'flex'
+}
+
+function exitChat() {
+  chatMode = false
+  chat.style.display = 'none'
+  events.style.display = ''
+  summary.classList.remove('hidden')
+  renderSummary(lastSummary)
+  renderEvents()
+}
+
+function addUserMsg(text) {
+  chatHistory.push({ role: 'user', text })
+  renderUserMsg(text)
+  saveHistory()
+}
+
+function addAiMsg(text, memories, raw) {
+  chatHistory.push({ role: 'ai', text, memories: memories || [], raw: !!raw })
+  renderAiMsg(text, memories || [], raw)
+  saveHistory()
 }
 
 function showTyping() {

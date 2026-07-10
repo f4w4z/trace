@@ -163,6 +163,22 @@ app.whenReady().then(async () => {
     if (win && win.isVisible()) win.hide()
   })
 
+  const chatPath = path.join(app.getPath('userData'), 'chat-history.json')
+
+  ipcMain.handle('save-chat', async (_, messages) => {
+    try {
+      fs.writeFileSync(chatPath, JSON.stringify(messages), 'utf-8')
+      return true
+    } catch { return false }
+  })
+
+  ipcMain.handle('load-chat', async () => {
+    try {
+      if (!fs.existsSync(chatPath)) return []
+      return JSON.parse(fs.readFileSync(chatPath, 'utf-8'))
+    } catch { return [] }
+  })
+
   ipcMain.handle('exec-command', async (_, cmd) => {
     switch (cmd) {
       case 'restart': {

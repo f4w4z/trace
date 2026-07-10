@@ -14,72 +14,114 @@ body {
   font-family: 'Inter', sans-serif;
   font-weight: 400;
   font-size: 14px;
-  line-height: 1.6;
+  line-height: 1.7;
   padding: 80px 24px;
   max-width: 680px;
   margin: 0 auto;
 }
-header { margin-bottom: 64px; }
+header { margin-bottom: 56px; }
 h1 {
   font-size: 20px;
   font-weight: 500;
   color: #f0f0f0;
   letter-spacing: -0.3px;
-  margin-bottom: 8px;
+  margin-bottom: 12px;
 }
-h1 span { font-weight: 300; color: #666; }
-p {
-  color: #888;
-  max-width: 520px;
-}
-a { color: #888; text-decoration: none; border-bottom: 1px solid #222; }
+h1 span { font-weight: 300; color: #555; }
+p { color: #888; max-width: 560px; }
+a { color: #999; text-decoration: none; border-bottom: 1px solid #222; }
 a:hover { color: #d4d4d4; border-color: #555; }
+code {
+  font-family: 'Inter', monospace;
+  font-size: 12.5px;
+  background: #111;
+  padding: 1px 6px;
+  border-radius: 3px;
+  color: #b0b0b0;
+}
+.section {
+  margin-bottom: 56px;
+}
 .section-label {
   font-size: 11px;
   font-weight: 500;
-  color: #444;
+  color: #3a3a3a;
   text-transform: uppercase;
   letter-spacing: 1.5px;
-  margin-bottom: 24px;
+  margin-bottom: 20px;
 }
-.timeline { margin-bottom: 64px; }
+.desc { font-size: 14px; color: #888; }
+.desc + .desc { margin-top: 14px; }
+.timeline { margin-bottom: 0; }
 .entry {
   display: flex;
   gap: 16px;
-  padding: 12px 0;
-  border-bottom: 1px solid #141414;
+  padding: 14px 0;
+  border-bottom: 1px solid #121212;
 }
 .entry:last-child { border-bottom: none; }
 .entry-date {
+  font-size: 12px;
+  color: #444;
+  width: 80px;
+  flex-shrink: 0;
+  padding-top: 2px;
+}
+.entry-desc {
+  font-size: 13px;
+  color: #a0a0a0;
+}
+.entry-desc strong {
+  font-weight: 500;
+  color: #ddd;
+}
+.feature-list {
+  list-style: none;
+  margin-top: 4px;
+}
+.feature-list li {
+  font-size: 13px;
+  color: #777;
+  padding: 3px 0;
+  padding-left: 14px;
+  position: relative;
+}
+.feature-list li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 10px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #222;
+}
+.arch-grid { margin-bottom: 0; }
+.arch-item {
+  display: flex;
+  gap: 16px;
+  padding: 10px 0;
+  border-bottom: 1px solid #121212;
+}
+.arch-item:last-child { border-bottom: none; }
+.arch-item .label {
   font-size: 12px;
   color: #555;
   width: 80px;
   flex-shrink: 0;
   padding-top: 1px;
 }
-.entry-desc {
-  font-size: 13px;
-  color: #b0b0b0;
-}
-.entry-desc strong {
-  font-weight: 500;
-  color: #e0e0e0;
-}
-.arch-section { margin-bottom: 48px; }
-.arch-item {
-  display: flex;
-  gap: 16px;
-  padding: 8px 0;
-}
-.arch-item .label {
-  font-size: 12px;
-  color: #555;
-  width: 80px;
-  flex-shrink: 0;
-}
 .arch-item .desc { font-size: 13px; color: #999; }
+.endpoint {
+  font-size: 12.5px;
+  color: #777;
+  padding: 4px 0;
+  font-family: 'Inter', monospace;
+}
 footer {
   margin-top: 80px;
+  padding-top: 20px;
+  border-top: 1px solid #121212;
   font-size: 12px;
   color: #444;
 }
@@ -90,30 +132,86 @@ footer a { font-size: 12px; }
 
 <header>
 <h1>trace <span>local context cloud</span></h1>
-<p>An OS-level memory layer that captures computer activity and indexes it with <a href="https://supermemory.ai">Supermemory</a> for AI-powered recall.</p>
+<p>AI agents and coding tools have no memory of what you did between conversations. They start blank every time. Trace solves this by continuously capturing your computer activity, indexing it locally with <a href="https://supermemory.ai">Supermemory</a>, and exposing it through a chat overlay and API. Your context persists forever.</p>
 </header>
 
-<div class="section-label">Architecture</div>
-
-<div class="arch-section">
-<div class="arch-item"><div class="label">Daemon</div><div class="desc">Persistent PowerShell tracker captures foreground windows, browser URLs, process snapshots, and idle state on a 3-second loop. File watcher monitors create/edit events. Editor detector identifies active projects.</div></div>
-<div class="arch-item"><div class="label">Storage</div><div class="desc">All events written to <code>~/.trace/events.jsonl</code> and fire-and-forget posted to Supermemory Local (localhost:6767) for vector indexing and hybrid search. Falls back to local-only when Supermemory is unreachable.</div></div>
-<div class="arch-item"><div class="label">API</div><div class="desc">Express server on port 6768 with REST endpoints for context, search, and daily summaries. MCP-compatible tools for AI agent integration. LLM-powered Q&A via any OpenAI-compatible endpoint.</div></div>
-<div class="arch-item"><div class="label">Overlay</div><div class="desc">Frameless Electron window (Alt+X) with chat-style search bar and activity feed. Web-based HUD dashboard on port 6769 for live session tracking.</div></div>
+<div class="section">
+<div class="section-label">Why</div>
+<p class="desc">Every time you ask an AI about your work, it has no idea what you've been doing. The files you edited, the terminal commands you ran, the browser tabs you had open, the project you were focused on. Trace bridges that gap by recording activity as structured events, indexing them into a searchable memory graph, and letting you query everything with natural language. It runs entirely on your machine. Nothing leaves.</p>
 </div>
 
-<div class="section-label">Updates</div>
+<div class="section">
+<div class="section-label">How it works</div>
+<div class="arch-grid">
+<div class="arch-item"><div class="label">Capture</div><div class="desc">A persistent PowerShell process streams what you do: foreground window changes, browser URLs (via UI Automation), running processes, and idle state. Separate watchers track file edits, editor projects, and terminal commands. All events are timestamped and tagged with source, app, and project context.</div></div>
+<div class="arch-item"><div class="label">Store</div><div class="desc">Every event is written immediately to <code>~/.trace/events.jsonl</code> and asynchronously posted to Supermemory Local on port 6767 for chunking, embedding, and indexing. The local file acts as the source of truth. Supermemory provides hybrid vector-keyword search. If Supermemory is down, all queries fall back to full substring scan of the local file.</div></div>
+<div class="arch-item"><div class="label">Query</div><div class="desc">An Express server on port 6768 exposes REST endpoints for context retrieval, search, daily summaries, and MCP-compatible tools for AI agents. An LLM-powered Q&A mode sends your query plus relevant memories to any OpenAI-compatible endpoint (OpenRouter, OpenAI, Ollama, etc.) and returns a natural language answer citing specific apps, files, and URLs.</div></div>
+<div class="arch-item"><div class="label">Access</div><div class="desc">Press Alt+X to open a frameless chat overlay where you can type questions and get answers with supporting evidence. A web-based HUD on port 6769 shows live activity, session timelines, and search results. The API can be used directly, or through MCP tools integrated into OpenCode, Claude Code, Cursor, and other AI coding assistants.</div></div>
+</div>
+</div>
 
+<div class="section">
+<div class="section-label">Events captured</div>
+<p class="desc">Each event carries a source, type, content, timestamp, metadata (app, project, URL, path), and tags for filtering and time bucketing.</p>
+<ul class="feature-list">
+<li>Foreground app switches with window title</li>
+<li>Browser URL changes (Chrome, Edge, Brave via UI Automation)</li>
+<li>Process snapshots every 10 seconds for app open/close detection</li>
+<li>Idle start and end events after 5 minutes of inactivity</li>
+<li>File creation and modification events via chokidar</li>
+<li>Editor project directory detection</li>
+<li>PowerShell command history capture</li>
+<li>Auto-generated session summaries every 30 minutes per project</li>
+</ul>
+</div>
+
+<div class="section">
+<div class="section-label">API</div>
+<p class="desc">All endpoints return JSON. The server runs on port 6768.</p>
+<div class="endpoint">GET /context/current - active project, recent events, current session</div>
+<div class="endpoint">GET /context/query?q=...&llm=true - search memories with optional AI answer</div>
+<div class="endpoint">GET /context/summary - LLM summary of last 2 hours of activity</div>
+<div class="endpoint">GET /context/day?date=2026-07-11 - full day with sessions grouped by project</div>
+<div class="endpoint">GET /health - service health and Supermemory status</div>
+<div class="endpoint">POST /admin/daemon/pause - pause activity capture</div>
+<div class="endpoint">POST /admin/daemon/resume - resume activity capture</div>
+<div class="endpoint">DELETE /admin/memories - clear all stored events</div>
+<div class="endpoint" style="margin-top:10px;color:#888;">POST /mcp with tool name and args for AI agent integration</div>
+</div>
+
+<div class="section">
+<div class="section-label">Configuration</div>
+<p class="desc">Copy <code>.env.example</code> to <code>.env</code>. The server reads these variables at startup:</p>
+<div class="endpoint">SUPERMEMORY_URL - http://localhost:6767 (default)</div>
+<div class="endpoint">SUPERMEMORY_API_KEY - printed on first supermemory boot</div>
+<div class="endpoint">CONTAINER_TAG - namespace for your memories (default: trace)</div>
+<div class="endpoint">WATCH_SOURCES - comma-separated: filesystem, browser, editor, terminal</div>
+<div class="endpoint">WATCH_PATHS - semicolon-separated directories to monitor</div>
+<div class="endpoint">LLM_URL / LLM_MODEL / LLM_API_KEY - for AI-powered Q&A</div>
+</div>
+
+<div class="section">
+<div class="section-label">Supermemory</div>
+<p class="desc">Trace uses <a href="https://supermemory.ai">Supermemory Local</a> as its remote memory backend. Supermemory handles chunking, embedding, vector storage, and hybrid search. It runs as a single binary on localhost:6767, inside WSL on Windows. Configure it with your preferred LLM provider for automatic memory extraction:</p>
+<div class="endpoint">OPENAI_BASE_URL=https://openrouter.ai/api/v1</div>
+<div class="endpoint">OPENAI_API_KEY=sk-or-v1-...</div>
+<div class="endpoint">OPENAI_MODEL=tencent/hy3-preview</div>
+<p class="desc" style="margin-top:12px;">Supermemory's memory agent workflow extracts facts from each document, enabling semantic search and user profile building over time. When no LLM is configured, documents are still indexed for vector search, but the memory agent is skipped.</p>
+</div>
+
+<div class="section">
+<div class="section-label">Updates</div>
 <div class="timeline">
-<div class="entry"><div class="entry-date">Jul 11</div><div class="entry-desc"><strong>v0.1.0</strong> Renamed from smt to trace. Single-instance lock prevents duplicate launches. Local store scans all events for search. Supermemory uses v3/search with remoteOk flag. Chat-style overlay with logo in tray, search bar, spinner, HUD, and favicon. Comprehensive README.</div></div>
-<div class="entry"><div class="entry-date">Jul 11</div><div class="entry-desc"><strong>Chat AI</strong> Logo-based typing spinner. Escape returns to home. LLM context includes recent events. Blur debounce at 300ms prevents accidental close.</div></div>
-<div class="entry"><div class="entry-date">Jul 11</div><div class="entry-desc"><strong>Search & AI</strong> Chat-style search bar with Enter to query, AI Q&A mode, message bubbles, and logo in the search field.</div></div>
-<div class="entry"><div class="entry-date">Jul 11</div><div class="entry-desc"><strong>Unified Tracker</strong> Single persistent PowerShell process replaces separate activity.ts and browser.ts. Captures foreground, browser URLs, process snapshots, and idle detection on a 3-second loop with auto-restart.</div></div>
-<div class="entry"><div class="entry-date">Jul 11</div><div class="entry-desc"><strong>Startup scripts</strong> start.bat and start.vbs for one-click launch with hidden windows.</div></div>
-<div class="entry"><div class="entry-date">Jul 10</div><div class="entry-desc"><strong>Redesign</strong> Electron overlay redesigned with greeting message, background fetch of events, and close-out animation. Summary endpoint with 5-minute cache and LLM-powered summaries.</div></div>
-<div class="entry"><div class="entry-date">Jul 10</div><div class="entry-desc"><strong>Electron overlay</strong> Native frameless window with Spotlight-style appearance. Context API with MCP tool support. HUD server for web-based monitoring.</div></div>
-<div class="entry"><div class="entry-date">Jul 9</div><div class="entry-desc"><strong>HUD overlay</strong> Dark-themed web dashboard with live activity feed, session timeline, and search.</div></div>
-<div class="entry"><div class="entry-date">Jul 8</div><div class="entry-desc"><strong>Initial</strong> Daemon watchers for filesystem, editor, and terminal. Supermemory client with local fallback.</div></div>
+<div class="entry"><div class="entry-date">Jul 11</div><div class="entry-desc"><strong>v0.1.0</strong> Renamed from smt to trace. Single-instance lock prevents duplicate launches. Local store scans all events for search. Supermemory uses v3/search with remoteOk flag. Chat-style overlay with logo in tray, search bar, spinner, HUD, and favicon. Comprehensive README and landing page.</div></div>
+<div class="entry"><div class="entry-date">Jul 11</div><div class="entry-desc"><strong>Chat AI</strong> Logo-based typing spinner. Escape returns to home view. LLM context includes recent events. Blur debounce at 300ms with focus cancellation. HUD with live event feed and session timeline.</div></div>
+<div class="entry"><div class="entry-date">Jul 11</div><div class="entry-desc"><strong>Search & AI</strong> Chat-style search bar. Enter to send, AI Q&A mode with message bubbles. Logo in search field. Server health check on startup with degraded mode fallback.</div></div>
+<div class="entry"><div class="entry-date">Jul 11</div><div class="entry-desc"><strong>Unified Tracker</strong> Single persistent PowerShell process replaces separate activity.ts and browser.ts. Captures foreground switches, browser URLs (UI Automation), process snapshots, and idle detection on a 3-second loop with automatic restart on crash.</div></div>
+<div class="entry"><div class="entry-date">Jul 11</div><div class="entry-desc"><strong>Startup scripts</strong> start.bat and start.vbs for one-click launch. Server and Electron start in hidden windows. HUD port 6769 for browser-based monitoring.</div></div>
+<div class="entry"><div class="entry-date">Jul 10</div><div class="entry-desc"><strong>Redesign</strong> Electron overlay redesigned with greeting, background event fetch, and close-out animation. Summary endpoint with 5-minute cache. LLM-powered activity summaries. 5-second HUD polling.</div></div>
+<div class="entry"><div class="entry-date">Jul 10</div><div class="entry-desc"><strong>Electron overlay</strong> Native frameless, transparent, always-on-top window with Spotlight-style appearance. Tray icon with show/quit. Alt+X global shortcut. IPC bridge for API calls. Context API with MCP tool support. HUD WebSocket server.</div></div>
+<div class="entry"><div class="entry-date">Jul 9</div><div class="entry-desc"><strong>HUD overlay</strong> Dark-themed web dashboard with live activity feed, session timeline, search with keyboard navigation, and status indicators. Express server with WebSocket push.</div></div>
+<div class="entry"><div class="entry-date">Jul 8</div><div class="entry-desc"><strong>Initial build</strong> Daemon watchers for filesystem (chokidar), editor projects, and terminal history. Supermemory client with local JSONL storage and remote API. Dual-layer search with automatic fallback. Session grouping with 30-minute gap detection.</div></div>
+</div>
 </div>
 
 <footer>

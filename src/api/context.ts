@@ -33,9 +33,12 @@ export class ContextService {
 
   async queryWithLLM(query: string, llmUrl?: string, llmModel?: string, llmApiKey?: string): Promise<QueryResult> {
     const results = (await this.client.searchV4(query, 10)).filter(d => !this.isSummary(d))
+    const recent = (await this.client.listDocuments(25)).filter(d => !this.isSummary(d))
+    const seen = new Set(results.map(r => r.id))
+    const combined = [...results, ...recent.filter(r => !seen.has(r.id))]
     let answer: string | undefined
     if (llmUrl && llmModel) {
-      answer = await this.askLLM(query, results, llmUrl, llmModel, llmApiKey)
+      answer = await this.askLLM(query, combined, llmUrl, llmModel, llmApiKey)
     }
     return { query, memories: results, answer }
   }
@@ -246,13 +249,32 @@ ${events.slice(0, 60).map(e => `[${e.source}] ${e.content}${e.metadata.app ? ` (
       return this.callLLM(systemPrompt, userPrompt, llmUrl, llmModel, llmApiKey)
     }
 
-    const context = memories.map(m => {
-      const text = m.title ?? m.memory ?? m.chunk ?? m.content ?? ''
-      const path = m.metadata?.path ?? m.metadata?.url ?? ''
-      return `- ${text}${path ? ` (${path})` : ''}`
-    }).join('\n')
+    const apps = new Map<string, { count: number; titles: string[]; urls: string[] }>()
+    for (const m of memories) {
+      const app = (m.metadata?.app as string) ?? m.source ?? 'unknown'
+      if (!apps.has(app)) apps.set(app, { count: 0, titles: [], urls: [] })
+      const entry = apps.get(app)!
+      entry.count++
+      const text = m.title ?? m.content ?? m.memory ?? m.chunk ?? ''
+      if (text && !entry.titles.includes(text)) entry.titles.push(text)
+      const url = m.metadata?.url as string
+      if (url && !entry.urls.includes(url)) entry.urls.push(url)
+    }
+    const lines: string[] = []
+    for (const [app, info] of apps) {
+      lines.push(`App: ${app} (${info.count} events)`)
+      if (info.urls.length) lines.push(`  URLs: ${info.urls.join(', ')}`)
+      if (info.titles.length > 0) {
+        const snippet = info.titles.slice(0, 5).join(' | ')
+        lines.push(`  Titles: ${snippet}`)
+      }
+    }
+    const context = lines.join('\n')
 
-    const systemPrompt = 'You are a helpful assistant that answers questions based on the user\'s activity context. Use the provided memories to answer accurately. If the memories don\'t contain enough information, say so.'
+    const hasData = memories.length > 0
+    const systemPrompt = hasData
+      ? 'You are analyzing the user\'s computer activity log. Answer their question based ONLY on the activity data below. Be specific — mention apps, files, URLs, and projects by name. If the data is insufficient, say what you DO know rather than claiming emptiness.'
+      : 'You are a helpful assistant. The user asked about their recent activity but no data is available yet.'
     const userPrompt = `Based on my recent activity, please answer: ${query}\n\nMy recent memories:\n${context}`
 
     return this.callLLM(systemPrompt, userPrompt, llmUrl, llmModel, llmApiKey)

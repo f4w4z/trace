@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>smt</title>
+<link rel="icon" href="assets/logo.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -43,6 +44,12 @@ html, body {
   border-bottom: 1px solid rgba(255,255,255,0.04);
   flex-shrink: 0;
   gap: 10px;
+}
+#search-logo {
+  width: 20px; height: 20px;
+  border-radius: 6px;
+  flex-shrink: 0;
+  opacity: 0.3;
 }
 #search-input {
   flex: 1;
@@ -222,12 +229,21 @@ html, body {
   animation: slideIn 0.2s ease both;
 }
 .typing-dots {
-  display: inline-flex; gap: 4px;
+  display: inline-flex; gap: 4px; align-items: center;
   padding: 12px 16px;
   background: rgba(255,255,255,0.02);
   border: 1px solid rgba(255,255,255,0.04);
   border-radius: 12px;
   border-bottom-left-radius: 4px;
+}
+.typing-logo {
+  width: 16px; height: 16px;
+  border-radius: 4px;
+  animation: logoSpin 1s linear infinite;
+}
+@keyframes logoSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 .typing-dots span {
   width: 6px; height: 6px;
@@ -262,6 +278,7 @@ kbd {
 <body>
 <div id="window">
   <div id="search-row">
+    <img id="search-logo" src="" alt="">
     <input id="search-input" type="text" placeholder="Ask what you've been doing..." spellcheck="false" autofocus>
     <button id="send-btn">↵</button>
   </div>

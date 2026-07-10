@@ -7,4 +7,5 @@ contextBridge.exposeInMainWorld('smt', {
   openUrl: (url) => ipcRenderer.invoke('open-url', url),
   username: () => ipcRenderer.invoke('get-username'),
   hideWindow: () => ipcRenderer.send('hide-window'),
+  getIcon: () => ipcRenderer.invoke('get-icon'),
 })

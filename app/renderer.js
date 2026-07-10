@@ -5,8 +5,10 @@ let activeEvents = []
 let selectedIndex = -1
 let chatMode = false
 let chatHistory = []
+let iconDataUrl = null
 
 const input = document.getElementById('search-input')
+const searchLogo = document.getElementById('search-logo')
 const sendBtn = document.getElementById('send-btn')
 const greetingText = document.getElementById('greeting-text')
 const greetingSub = document.getElementById('greeting-sub')
@@ -16,6 +18,14 @@ const summaryStats = document.getElementById('summary-stats')
 const events = document.getElementById('events')
 const eventsEmpty = document.getElementById('events-empty')
 const chat = document.getElementById('chat')
+
+window.smt.getIcon().then(url => {
+  if (url) {
+    iconDataUrl = url
+    searchLogo.src = url
+    searchLogo.style.opacity = '0.5'
+  }
+})
 
 window.smt.username().then(name => {
   username = name
@@ -138,10 +148,18 @@ input.addEventListener('input', () => {
 
 input.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
+    if (chatMode) {
+      if (input.value) {
+        input.value = ''
+        sendBtn.classList.remove('active')
+      } else {
+        exitChat()
+      }
+      return
+    }
     if (input.value) {
       input.value = ''
       sendBtn.classList.remove('active')
-      if (chatMode) exitChat()
       return
     }
     closeWindow()
@@ -170,14 +188,11 @@ async function sendMessage() {
   hideTyping()
   if (data?.answer) {
     addAiMsg(data.answer, data.memories ?? [])
-    chatHistory.push({ role: 'ai', text: data.answer, events: data.memories ?? [] })
   } else if (data?.memories?.length) {
     const fallback = data.memories.map(m => m.title ?? m.content ?? m.memory ?? m.chunk ?? '').filter(Boolean).join('\n')
-    addAiMsg(fallback ? `Found these relevant memories:\n\n${fallback}` : 'No relevant memories found.', [])
-    chatHistory.push({ role: 'ai', text: fallback || 'No relevant memories found.', events: data.memories ?? [] })
+    addAiMsg(fallback || 'No relevant activity found.', [])
   } else {
     addAiMsg('No relevant activity found for that question.', [])
-    chatHistory.push({ role: 'ai', text: 'No relevant activity found for that question.', events: [] })
   }
   scrollToBottom()
 }
@@ -185,7 +200,6 @@ async function sendMessage() {
 function enterChat() {
   chatMode = true
   summary.classList.remove('visible')
-  events.classList.add('hidden')
   events.style.display = 'none'
   chat.style.display = 'flex'
   chat.innerHTML = ''
@@ -196,14 +210,12 @@ function exitChat() {
   chatMode = false
   chat.style.display = 'none'
   events.style.display = ''
-  events.classList.remove('hidden')
   summary.classList.remove('hidden')
   renderSummary(lastSummary)
   renderEvents()
 }
 
 function addUserMsg(text) {
-  chatHistory.push({ role: 'user', text })
   const el = document.createElement('div')
   el.className = 'chat-msg user'
   el.innerHTML = `<div class="chat-bubble">${escape(text)}</div>`
@@ -239,7 +251,10 @@ function showTyping() {
   const el = document.createElement('div')
   el.className = 'typing-indicator'
   el.id = 'typing-indicator'
-  el.innerHTML = '<div class="typing-dots"><span></span><span></span><span></span></div>'
+  const logo = iconDataUrl
+    ? `<img class="typing-logo" src="${iconDataUrl}">`
+    : '<span style="opacity:0.2;font-size:11px">⚡</span>'
+  el.innerHTML = `<div class="typing-dots">${logo}<span></span><span></span><span></span></div>`
   chat.appendChild(el)
 }
 

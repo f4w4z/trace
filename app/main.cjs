@@ -1,6 +1,7 @@
 const { app, globalShortcut, BrowserWindow, Tray, Menu, nativeImage, screen, ipcMain, shell } = require('electron')
 const { spawn } = require('child_process')
 const path = require('path')
+const fs = require('fs')
 const http = require('http')
 
 const API_PORT = 6768
@@ -98,7 +99,7 @@ function toggleWindow() {
 }
 
 function createTray() {
-  const iconPath = path.join(__dirname, 'assets', 'icon.png')
+  const iconPath = path.join(__dirname, 'assets', 'logo.png')
   let icon
   try { icon = nativeImage.createFromPath(iconPath).resize({ width: 16, height: 16 }) } catch {}
   if (!icon || icon.isEmpty()) icon = nativeImage.createEmpty()
@@ -134,6 +135,16 @@ app.whenReady().then(async () => {
   })
 
   ipcMain.handle('get-username', () => process.env.USERNAME || 'there')
+
+  ipcMain.handle('get-icon', () => {
+    const iconPath = path.join(__dirname, 'assets', 'logo.png')
+    try {
+      const data = fs.readFileSync(iconPath)
+      return `data:image/png;base64,${data.toString('base64')}`
+    } catch {
+      return null
+    }
+  })
 
   ipcMain.on('hide-window', () => {
     if (win && win.isVisible()) win.hide()

@@ -3,10 +3,11 @@ const ICONS = { filesystem: '📁', browser: '🌐', editor: '✏️', terminal:
 let username = 'there'
 let activeEvents = []
 let selectedIndex = -1
-let currentResults = []
-let searchDebounce = null
+let chatMode = false
+let chatHistory = []
 
 const input = document.getElementById('search-input')
+const sendBtn = document.getElementById('send-btn')
 const greetingText = document.getElementById('greeting-text')
 const greetingSub = document.getElementById('greeting-sub')
 const summary = document.getElementById('summary')
@@ -14,6 +15,7 @@ const summaryText = document.getElementById('summary-text')
 const summaryStats = document.getElementById('summary-stats')
 const events = document.getElementById('events')
 const eventsEmpty = document.getElementById('events-empty')
+const chat = document.getElementById('chat')
 
 window.smt.username().then(name => {
   username = name
@@ -104,14 +106,14 @@ async function pollEvents() {
   activeEvents = evts
   selectedIndex = -1
   renderGreeting()
-  renderEvents()
+  if (!chatMode) renderEvents()
 }
 
 async function pollSummary() {
   const data = await window.smt.api('GET', '/context/summary')
   if (!data) return
   lastSummary = data
-  renderSummary(data)
+  if (!chatMode) renderSummary(data)
 }
 
 function closeWindow() {
@@ -126,77 +128,128 @@ function closeWindow() {
 pollEvents()
 pollSummary()
 setInterval(pollEvents, 5000)
-setInterval(pollSummary, 300000) // every 5 min
+setInterval(pollSummary, 300000)
 
-// ---- search ----
+// ---- chat ----
 
 input.addEventListener('input', () => {
-  clearTimeout(searchDebounce)
-  const q = input.value.trim()
-  if (!q) {
-    summary.classList.remove('hidden')
-    renderEvents()
-    return
-  }
-  summary.classList.add('hidden')
-  searchDebounce = setTimeout(() => doSearch(q), 200)
+  sendBtn.classList.toggle('active', input.value.trim().length > 0)
 })
 
 input.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
     if (input.value) {
       input.value = ''
-      summary.classList.remove('hidden')
-      renderEvents()
+      sendBtn.classList.remove('active')
+      if (chatMode) exitChat()
       return
     }
     closeWindow()
     return
   }
-  if (e.key === 'ArrowDown') { e.preventDefault(); moveSel(1) }
-  if (e.key === 'ArrowUp') { e.preventDefault(); moveSel(-1) }
-  if (e.key === 'Enter') { e.preventDefault(); openSel() }
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault()
+    sendMessage()
+  }
 })
 
-function moveSel(dir) {
-  const items = events.querySelectorAll('.event-item')
-  if (!items.length) return
-  selectedIndex = Math.max(0, Math.min(items.length - 1, selectedIndex + dir))
-  items.forEach((el, i) => el.classList.toggle('selected', i === selectedIndex))
-  items[selectedIndex]?.scrollIntoView({ block: 'nearest' })
-}
+sendBtn.addEventListener('click', () => sendMessage())
 
-function openSel() {
-  if (selectedIndex < 0 || selectedIndex >= activeEvents.length) return
-  const item = activeEvents[selectedIndex]
-  const url = item.metadata?.url
-  if (url && !url.startsWith('file://')) window.smt.openUrl(url)
-}
+async function sendMessage() {
+  const q = input.value.trim()
+  if (!q) return
+  input.value = ''
+  sendBtn.classList.remove('active')
 
-async function doSearch(q) {
-  const data = await window.smt.api('GET', `/context/query?q=${encodeURIComponent(q)}`)
-  const memories = data.memories ?? data.results ?? []
-  currentResults = memories
-  selectedIndex = -1
+  if (!chatMode) enterChat()
+  addUserMsg(q)
+  showTyping()
+  scrollToBottom()
 
-  if (!memories.length) {
-    events.innerHTML = '<div class="event-item" style="cursor:default;color:rgba(255,255,255,0.15);justify-content:center;padding:20px">No results</div>'
-    return
+  const data = await window.smt.api('GET', `/context/query?q=${encodeURIComponent(q)}&llm=true`)
+  hideTyping()
+  if (data?.answer) {
+    addAiMsg(data.answer, data.memories ?? [])
+    chatHistory.push({ role: 'ai', text: data.answer, events: data.memories ?? [] })
+  } else if (data?.memories?.length) {
+    const fallback = data.memories.map(m => m.title ?? m.content ?? m.memory ?? m.chunk ?? '').filter(Boolean).join('\n')
+    addAiMsg(fallback ? `Found these relevant memories:\n\n${fallback}` : 'No relevant memories found.', [])
+    chatHistory.push({ role: 'ai', text: fallback || 'No relevant memories found.', events: data.memories ?? [] })
+  } else {
+    addAiMsg('No relevant activity found for that question.', [])
+    chatHistory.push({ role: 'ai', text: 'No relevant activity found for that question.', events: [] })
   }
+  scrollToBottom()
+}
 
-  events.innerHTML = memories.map((m, i) => {
-    const s = m.metadata?.source ?? 'filesystem'
-    const icon = ICONS[s] ?? '📄'
-    const title = m.title ?? m.content ?? m.memory ?? m.chunk ?? ''
-    const detail = m.metadata?.path ?? m.metadata?.url ?? m.metadata?.project ?? ''
-    const ts = m.createdAt ?? m.metadata?.rawTimestamp
-    return `<div class="event-item" data-index="${i}" style="animation-delay:${(i % 15) * 0.02}s">
-      <div class="event-icon ${s}">${icon}</div>
-      <div class="event-body">
-        <div class="event-title">${escape(title)}</div>
-        ${detail ? `<div class="event-detail">${escape(detail)}</div>` : ''}
-      </div>
-      ${ts ? `<div class="event-time">${timeAgo(ts)}</div>` : ''}
-    </div>`
-  }).join('')
+function enterChat() {
+  chatMode = true
+  summary.classList.remove('visible')
+  events.classList.add('hidden')
+  events.style.display = 'none'
+  chat.style.display = 'flex'
+  chat.innerHTML = ''
+  chatHistory = []
+}
+
+function exitChat() {
+  chatMode = false
+  chat.style.display = 'none'
+  events.style.display = ''
+  events.classList.remove('hidden')
+  summary.classList.remove('hidden')
+  renderSummary(lastSummary)
+  renderEvents()
+}
+
+function addUserMsg(text) {
+  chatHistory.push({ role: 'user', text })
+  const el = document.createElement('div')
+  el.className = 'chat-msg user'
+  el.innerHTML = `<div class="chat-bubble">${escape(text)}</div>`
+  chat.appendChild(el)
+}
+
+function addAiMsg(text, memories) {
+  const el = document.createElement('div')
+  el.className = 'chat-msg ai'
+  let html = `<div class="chat-bubble">${escape(text).replace(/\n/g, '<br>')}</div>`
+  if (memories.length) {
+    html += '<div class="chat-events">'
+    html += memories.slice(0, 6).map(m => {
+      const s = m.metadata?.source ?? 'filesystem'
+      const icon = ICONS[s] ?? '📄'
+      const title = m.title ?? m.content ?? m.memory ?? m.chunk ?? ''
+      const detail = m.metadata?.path ?? m.metadata?.url ?? m.metadata?.project ?? ''
+      return `<div class="event-item">
+        <div class="event-icon ${s}">${icon}</div>
+        <div class="event-body">
+          <div class="event-title">${escape(title)}</div>
+          ${detail ? `<div class="event-detail">${escape(detail)}</div>` : ''}
+        </div>
+      </div>`
+    }).join('')
+    html += '</div>'
+  }
+  el.innerHTML = html
+  chat.appendChild(el)
+}
+
+function showTyping() {
+  const el = document.createElement('div')
+  el.className = 'typing-indicator'
+  el.id = 'typing-indicator'
+  el.innerHTML = '<div class="typing-dots"><span></span><span></span><span></span></div>'
+  chat.appendChild(el)
+}
+
+function hideTyping() {
+  const el = document.getElementById('typing-indicator')
+  if (el) el.remove()
+}
+
+function scrollToBottom() {
+  requestAnimationFrame(() => {
+    chat.scrollTop = chat.scrollHeight
+  })
 }

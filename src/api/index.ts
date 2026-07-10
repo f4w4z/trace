@@ -34,6 +34,15 @@ export function createApi(config: Config, supermemory: SupermemoryClient, daemon
     }
   })
 
+  app.get('/context/summary', async (_req: Request, res: Response) => {
+    try {
+      const result = await context.getSummary()
+      res.json(result)
+    } catch (err) {
+      res.status(500).json({ error: String(err) })
+    }
+  })
+
   app.get('/context/day', async (req: Request, res: Response) => {
     try {
       const date = (req.query.date as string) ?? new Date().toISOString().slice(0, 10)

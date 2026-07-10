@@ -53,6 +53,70 @@ export class ContextService {
     return { date: dateStr, sessions, eventCount: events.length, summary }
   }
 
+  private summaryCache: { text: string; stats: { apps: { name: string; events: number }[]; browsers: { app: string; titles: string[] }[]; files: string[]; total: number }; expiresAt: number } | null = null
+
+  async getSummary(): Promise<{ text: string; stats: { apps: { name: string; events: number }[]; browsers: { app: string; titles: string[] }[]; files: string[]; total: number }; cached: boolean }> {
+    const now = Date.now()
+    if (this.summaryCache && now < this.summaryCache.expiresAt) {
+      return { ...this.summaryCache, cached: true }
+    }
+
+    const docs = await this.client.listDocuments(100)
+    const twoHrsAgo = new Date(now - 2 * 60 * 60 * 1000)
+    const recent = docs.filter(d => {
+      if (this.isSummary(d)) return false
+      const ts = d.createdAt ? new Date(d.createdAt) : null
+      return ts && ts >= twoHrsAgo
+    })
+
+    const events = this.docsToEvents(recent)
+    const appMap = new Map<string, number>()
+    const browserMap = new Map<string, Set<string>>()
+    const files: string[] = []
+
+    for (const e of events) {
+      const app = e.metadata.app || e.source
+      appMap.set(app, (appMap.get(app) || 0) + 1)
+      if (e.source === 'browser' || e.metadata.url) {
+        const titles = browserMap.get(app) ?? new Set()
+        if (e.metadata.title || e.content) titles.add(e.metadata.title || e.content)
+        browserMap.set(app, titles)
+      }
+      if (e.metadata.path) files.push(e.metadata.path)
+      else if ((e.source === 'editor' || e.source === 'filesystem') && e.content) files.push(e.content)
+    }
+
+    const stats = {
+      apps: Array.from(appMap.entries()).map(([name, count]) => ({ name, events: count })).sort((a, b) => b.events - a.events),
+      browsers: Array.from(browserMap.entries()).map(([app, titles]) => ({ app, titles: Array.from(titles) })),
+      files: [...new Set(files)].slice(0, 20),
+      total: events.length,
+    }
+
+    const prompt = `The following is a raw log of the user's recent computer activity (last 2 hours). Summarize it in 2-4 concise, natural sentences. Mention key apps used, files worked on, and websites visited. Sound like a helpful assistant reporting what the user did.
+
+Activity:
+${events.slice(0, 60).map(e => `[${e.source}] ${e.content}${e.metadata.app ? ` (${e.metadata.app})` : ''}`).join('\n')}`
+
+    const llmUrl = process.env.LLM_URL
+    const llmModel = process.env.LLM_MODEL
+    const llmApiKey = process.env.LLM_API_KEY
+    let text = ''
+    if (llmUrl && llmModel) {
+      text = await this.askLLM(prompt, [], llmUrl, llmModel, llmApiKey, true)
+    }
+    if (!text) {
+      const topApps = stats.apps.slice(0, 4).map(a => `${a.name} (${a.events} events)`).join(', ')
+      const topFiles = stats.files.slice(0, 4).join(', ')
+      text = `You used ${stats.apps.length} apps — ${topApps}.`
+      if (stats.files.length) text += ` Worked on ${stats.files.length} files including ${topFiles}.`
+      if (stats.browsers.length) text += ` Visited ${stats.browsers.reduce((s, b) => s + b.titles.length, 0)} pages.`
+    }
+
+    this.summaryCache = { text, stats, expiresAt: now + 5 * 60 * 1000 }
+    return { text, stats, cached: false }
+  }
+
   async getManagementStatus(): Promise<{ running: boolean; memoryCount: number; containerTag: string }> {
     const docs = await this.client.listDocuments(1)
     return { running: true, memoryCount: docs.length, containerTag: '' }
@@ -174,7 +238,14 @@ export class ContextService {
     llmUrl: string,
     llmModel: string,
     llmApiKey?: string,
+    raw = false,
   ): Promise<string> {
+    if (raw) {
+      const systemPrompt = 'You are an AI assistant analyzing the user\'s computer activity log.'
+      const userPrompt = query
+      return this.callLLM(systemPrompt, userPrompt, llmUrl, llmModel, llmApiKey)
+    }
+
     const context = memories.map(m => {
       const text = m.title ?? m.memory ?? m.chunk ?? m.content ?? ''
       const path = m.metadata?.path ?? m.metadata?.url ?? ''
@@ -184,6 +255,16 @@ export class ContextService {
     const systemPrompt = 'You are a helpful assistant that answers questions based on the user\'s activity context. Use the provided memories to answer accurately. If the memories don\'t contain enough information, say so.'
     const userPrompt = `Based on my recent activity, please answer: ${query}\n\nMy recent memories:\n${context}`
 
+    return this.callLLM(systemPrompt, userPrompt, llmUrl, llmModel, llmApiKey)
+  }
+
+  private async callLLM(
+    systemPrompt: string,
+    userPrompt: string,
+    llmUrl: string,
+    llmModel: string,
+    llmApiKey?: string,
+  ): Promise<string> {
     try {
       const headers: Record<string, string> = { 'Content-Type': 'application/json' }
       if (llmApiKey) headers['Authorization'] = `Bearer ${llmApiKey}`
@@ -202,13 +283,13 @@ export class ContextService {
       })
       if (!res.ok) {
         logger.warn(`LLM returned ${res.status}`)
-        return 'LLM unavailable'
+        return ''
       }
       const data = await res.json() as { choices?: { message?: { content?: string } }[] }
-      return data.choices?.[0]?.message?.content ?? 'No response from LLM'
+      return data.choices?.[0]?.message?.content ?? ''
     } catch (err) {
       logger.error(`LLM query failed: ${err}`)
-      return 'LLM unavailable'
+      return ''
     }
   }
 }

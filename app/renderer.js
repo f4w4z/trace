@@ -226,7 +226,7 @@ async function sendMessage() {
   if (q.startsWith('/')) {
     const reply = await handleCommand(q)
     hideTyping()
-    addAiMsg(reply, [])
+    addAiMsg(reply, [], true)
     scrollToBottom()
     return
   }
@@ -269,10 +269,12 @@ function addUserMsg(text) {
   chat.appendChild(el)
 }
 
-function addAiMsg(text, memories) {
+function addAiMsg(text, memories, raw) {
   const el = document.createElement('div')
   el.className = 'chat-msg ai'
-  let html = `<div class="chat-bubble">${escape(text).replace(/\n/g, '<br>')}</div>`
+  let html = raw
+    ? `<div class="chat-bubble">${text}</div>`
+    : `<div class="chat-bubble">${escape(text).replace(/\n/g, '<br>')}</div>`
   if (memories.length) {
     html += '<div class="chat-events">'
     html += memories.slice(0, 6).map(m => {

@@ -11,6 +11,19 @@ let win = null
 let tray = null
 let serverProcess = null
 
+const gotTheLock = app.requestSingleInstanceLock()
+if (!gotTheLock) {
+  app.quit()
+} else {
+  app.on('second-instance', () => {
+    if (win) {
+      if (win.isMinimized()) win.restore()
+      win.focus()
+      win.show()
+    }
+  })
+}
+
 function isServerRunning() {
   return new Promise((resolve) => {
     const req = http.get(`http://localhost:${API_PORT}/health`, (res) => {
@@ -26,7 +39,7 @@ function isServerRunning() {
 async function ensureServer() {
   const running = await isServerRunning()
   if (running) return
-  console.log('starting smt server...')
+  console.log('starting trace server...')
   serverProcess = spawn('node', [SERVER_SCRIPT], {
     stdio: 'ignore',
     detached: false,
@@ -36,7 +49,7 @@ async function ensureServer() {
     await new Promise(r => setTimeout(r, 1000))
     if (await isServerRunning()) return
   }
-  console.error('smt server failed to start')
+  console.error('trace server failed to start')
 }
 
 function createWindow() {
@@ -104,7 +117,7 @@ function createTray() {
   try { icon = nativeImage.createFromPath(iconPath).resize({ width: 16, height: 16 }) } catch {}
   if (!icon || icon.isEmpty()) icon = nativeImage.createEmpty()
   tray = new Tray(icon)
-  tray.setToolTip('smt — Context Search')
+  tray.setToolTip('trace — Context Search')
   tray.setContextMenu(Menu.buildFromTemplate([
     { label: 'Show (Alt+X)', click: toggleWindow },
     { type: 'separator' },

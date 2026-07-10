@@ -1,5 +1,5 @@
 {
-  "name": "smt",
+  "name": "trace",
   "version": "0.1.0",
   "description": "Local Context Cloud — OS-level memory layer using Supermemory Local (localhost:6767)",
   "private": true,

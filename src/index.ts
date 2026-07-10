@@ -19,7 +19,7 @@ const api = createApi(config, supermemory, daemonCtl)
 const hud = createHudServer(config, supermemory)
 
 async function main(): Promise<void> {
-  logger.info('smt — Local Context Cloud starting')
+  logger.info('trace — Local Context Cloud starting')
   logger.info(`  supermemory: ${config.supermemoryUrl}`)
   logger.info(`  containerTag: ${config.containerTag}`)
   logger.info(`  apiKey: ${config.apiKey ? 'set' : 'not set (optional for local)'}`)

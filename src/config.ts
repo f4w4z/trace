@@ -35,7 +35,7 @@ export function loadConfig(): Config {
   return {
     supermemoryUrl: envStr('SUPERMEMORY_URL', 'http://localhost:6767'),
     apiKey: envStr('SUPERMEMORY_API_KEY', ''),
-    containerTag: envStr('CONTAINER_TAG', 'smt'),
+    containerTag: envStr('CONTAINER_TAG', 'trace'),
     watchSources: envSources('WATCH_SOURCES', 'filesystem,editor,terminal'),
     watchPaths: envPaths('WATCH_PATHS', path.join(os.homedir(), 'Projects')),
     chromeHistory: envStr('CHROME_HISTORY', path.join(os.homedir(), 'AppData', 'Local', 'Google', 'Chrome', 'User Data', 'Default', 'History')),

@@ -95,9 +95,9 @@ export class BrowserWatcher {
       const db = new SQL.Database(buf)
 
       const stmt = db.prepare(`
-        SELECT url, title, visit_time
+        SELECT urls.url, urls.title, visits.visit_time
         FROM urls JOIN visits ON urls.id = visits.url
-        ORDER BY visit_time DESC LIMIT 10
+        ORDER BY visits.visit_time DESC LIMIT 10
       `)
 
       const now = Date.now()
@@ -107,9 +107,10 @@ export class BrowserWatcher {
         const row = stmt.getAsObject() as { url: string; title: string | null; visit_time: number }
         const url = row.url?.trim() ?? ''
         const title = (row.title ?? url).trim()
-        if (url.startsWith('chrome://') || url.startsWith('edge://') || url.startsWith('brave://') || url.includes('localhost')) continue
-        const visitTime = Math.floor(row.visit_time / 1000) // Chrome uses microseconds -> milliseconds
-        if (isNaN(visitTime) || now - visitTime > SIX_HOURS_MS) continue
+        if (url.startsWith('chrome://') || url.startsWith('edge://') || url.startsWith('brave://') || url.includes('localhost') || url === 'about:blank') continue
+        // Chrome WebKit time: microseconds since 1601-01-01 UTC
+        const visitTime = Math.floor(row.visit_time / 1000) - 11644473600000
+        if (isNaN(visitTime) || now - visitTime > SIX_HOURS_MS || visitTime < 0) continue
         if (visitTime <= (this.lastSeen[browser.name] ?? 0)) continue
         this.lastSeen[browser.name] = visitTime
         visits.push({ url, title, visitTime, browser: browser.name })

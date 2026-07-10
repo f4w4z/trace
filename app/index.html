@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>smt</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="overlay">
+  <div id="window">
+    <div id="search-row">
+      <svg id="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="11" cy="11" r="8"/>
+        <path d="m21 21-4.35-4.35"/>
+      </svg>
+      <input id="search-input" type="text" placeholder="Search your context..." spellcheck="false" autofocus>
+    </div>
+    <div id="results">
+      <div id="empty-state">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.3">
+          <path d="M12 2a10 10 0 1 0 10 10"/>
+          <path d="M12 6v6l4 2"/>
+        </svg>
+        <span>Start typing to search your memories</span>
+      </div>
+      <div id="active-session" class="section">
+        <div class="section-header">Active Session</div>
+        <div id="active-session-content"></div>
+      </div>
+      <div id="search-results" class="section" style="display:none">
+        <div class="section-header">Results</div>
+        <div id="search-results-list"></div>
+      </div>
+    </div>
+    <div id="footer">
+      <span><kbd>↑</kbd><kbd>↓</kbd> navigate</span>
+      <span><kbd>⏎</kbd> open</span>
+      <span><kbd>Esc</kbd> close</span>
+    </div>
+  </div>
+</div>
+<script src="renderer.js"></script>
+</body>
+</html>

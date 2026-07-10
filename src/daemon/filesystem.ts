@@ -18,7 +18,7 @@ export class FilesystemWatcher {
     logger.info(`watching paths: ${paths.join(', ')}`)
 
     this.watcher = chokidar.watch(paths, {
-      ignored: /(node_modules|\.git|__pycache__|\.next|dist|build|\.venv|My Music|My Videos|My Pictures|AppData)/,
+      ignored: /(node_modules|\.git|__pycache__|\.next|dist|build|\.venv|\.supermemory|My Music|My Videos|My Pictures|AppData)/,
       persistent: true,
       ignoreInitial: true,
       depth: 6,

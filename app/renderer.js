@@ -19,24 +19,23 @@ const events = document.getElementById('events')
 const eventsEmpty = document.getElementById('events-empty')
 const chat = document.getElementById('chat')
 
-window.smt.getIcon().then(url => {
+window.trace.getIcon().then(url => {
   if (url) {
     iconDataUrl = url
     searchLogo.src = url
-    searchLogo.style.opacity = '0.5'
   }
 })
 
-window.smt.username().then(name => {
+window.trace.username().then(name => {
   username = name
   renderGreeting()
 })
 
-window.smt.onFocusSearch(() => {
+window.trace.onFocusSearch(() => {
   setTimeout(() => input.focus(), 50)
 })
 
-window.smt.onBlurHide(() => {
+window.trace.onBlurHide(() => {
   closeWindow()
 })
 
@@ -46,7 +45,7 @@ function renderGreeting() {
   greetingText.textContent = `Hey ${username}`
   greetingSub.textContent = activeEvents.length
     ? `You've been working on ${activeEvents[0]?.metadata?.project || 'a few things'}`
-    : `Good ${time} — start working and smt will catch it`
+    : `Good ${time} — start working and trace will catch it`
 }
 
 function renderEvents() {
@@ -107,7 +106,7 @@ let eventsKey = ''
 let lastSummary = null
 
 async function pollEvents() {
-  const data = await window.smt.api('GET', '/context/current')
+  const data = await window.trace.api('GET', '/context/current')
   if (!data) return
   const evts = data.recentEvents ?? []
   const key = evts.map(e => e.id ?? e.content).join('|')
@@ -120,7 +119,7 @@ async function pollEvents() {
 }
 
 async function pollSummary() {
-  const data = await window.smt.api('GET', '/context/summary')
+  const data = await window.trace.api('GET', '/context/summary')
   if (!data) return
   lastSummary = data
   if (!chatMode) renderSummary(data)
@@ -131,7 +130,7 @@ function closeWindow() {
   w.classList.add('closing')
   w.addEventListener('animationend', () => {
     w.classList.remove('closing')
-    window.smt.hideWindow()
+    window.trace.hideWindow()
   }, { once: true })
 }
 
@@ -184,7 +183,7 @@ async function sendMessage() {
   showTyping()
   scrollToBottom()
 
-  const data = await window.smt.api('GET', `/context/query?q=${encodeURIComponent(q)}&llm=true`)
+  const data = await window.trace.api('GET', `/context/query?q=${encodeURIComponent(q)}&llm=true`)
   hideTyping()
   if (data?.answer) {
     addAiMsg(data.answer, data.memories ?? [])

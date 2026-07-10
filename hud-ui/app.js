@@ -156,6 +156,6 @@ pollTimer = setInterval(poll, 5000)
 poll()
 
 // Listen for the Electron window focus signal
-if (window.smt?.onFocusSearch) {
-  window.smt.onFocusSearch(() => setTimeout(() => $('#search').focus(), 100))
+if (window.trace?.onFocusSearch) {
+  window.trace.onFocusSearch(() => setTimeout(() => $('#search').focus(), 100))
 }

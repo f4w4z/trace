@@ -8,7 +8,7 @@ export class SupermemoryClient {
   private apiKey: string
   private containerTag: string
   private local: LocalStore
-  private remoteOk = false
+  remoteOk = false
 
   constructor(baseUrl: string, apiKey: string, containerTag: string) {
     this.baseUrl = baseUrl.replace(/\/+$/, '')
@@ -35,7 +35,7 @@ export class SupermemoryClient {
     return event.id ?? null
   }
 
-  async searchV4(query: string, limit = 20): Promise<SupermemoryMemory[]> {
+  async searchQuery(query: string, limit = 20): Promise<SupermemoryMemory[]> {
     if (this.remoteOk) {
       const results = await this.remoteSearch(query, limit)
       if (results !== null && results.length > 0) return results
@@ -109,20 +109,26 @@ export class SupermemoryClient {
 
   private async remoteSearch(query: string, limit: number): Promise<SupermemoryMemory[] | null> {
     try {
-      const res = await fetch(`${this.baseUrl}/v4/search`, {
+      const res = await fetch(`${this.baseUrl}/v3/search`, {
         method: 'POST',
         headers: this.headers(),
-        body: JSON.stringify({ q: query, containerTag: this.containerTag, limit, searchMode: 'hybrid', threshold: 0.3 }),
+        body: JSON.stringify({ q: query, k: limit }),
       })
       if (!res.ok) return null
-      const data = await res.json() as { results?: SupermemoryMemory[] }
-      return data.results ?? []
+      const data = await res.json() as { results?: { documentId: string; title?: string; score: number; chunks: { content: string }[]; createdAt: string }[] }
+      if (!data.results || data.results.length === 0) return null
+      return data.results.map(r => ({
+        id: r.documentId,
+        content: r.chunks?.[0]?.content ?? r.title ?? '',
+        score: r.score,
+        createdAt: r.createdAt,
+      } as SupermemoryMemory))
     } catch {
       return null
     }
   }
 
-  private async remoteList(limit: number): Promise<SupermemoryMemory[] | null> {
+  async remoteList(limit: number): Promise<SupermemoryMemory[] | null> {
     try {
       const res = await fetch(`${this.baseUrl}/v3/documents/list`, {
         method: 'POST',

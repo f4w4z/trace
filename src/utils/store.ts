@@ -4,7 +4,7 @@ import os from 'os'
 import type { Event, SupermemoryMemory } from '../types.js'
 import { logger } from './logger.js'
 
-const DB_PATH = path.join(os.homedir(), '.smt', 'events.jsonl')
+const DB_PATH = path.join(os.homedir(), '.trace', 'events.jsonl')
 
 export class LocalStore {
   private ready: Promise<void>
@@ -60,11 +60,27 @@ export class LocalStore {
 
   async search(query: string, limit = 20): Promise<SupermemoryMemory[]> {
     const q = query.toLowerCase()
-    const all = await this.list(500)
-    return all.filter(m =>
-      (m.content ?? '').toLowerCase().includes(q) ||
-      JSON.stringify(m.metadata ?? {}).toLowerCase().includes(q)
-    ).slice(0, limit)
+    const docs: SupermemoryMemory[] = []
+    try {
+      if (!fs.existsSync(DB_PATH)) return []
+      const raw = fs.readFileSync(DB_PATH, 'utf-8')
+      const lines = raw.trim().split('\n').filter(Boolean)
+      for (let i = lines.length - 1; i >= 0 && docs.length < limit; i--) {
+        const e = JSON.parse(lines[i])
+        const content = (e.content ?? '').toLowerCase()
+        const meta = JSON.stringify(e.metadata ?? {}).toLowerCase()
+        if (content.includes(q) || meta.includes(q)) {
+          docs.push({
+            id: e.id,
+            content: e.content,
+            source: e.source,
+            metadata: { ...e.metadata, rawTimestamp: e.timestamp },
+            createdAt: e.timestamp,
+          } as SupermemoryMemory)
+        }
+      }
+    } catch {}
+    return docs
   }
 
   async deleteAll(): Promise<boolean> {

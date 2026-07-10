@@ -27,12 +27,12 @@ export class ContextService {
   }
 
   async searchContext(query: string): Promise<QueryResult> {
-    const results = (await this.client.searchV4(query)).filter(d => !this.isSummary(d))
+    const results = (await this.client.searchQuery(query)).filter(d => !this.isSummary(d))
     return { query, memories: results, answer: undefined }
   }
 
   async queryWithLLM(query: string, llmUrl?: string, llmModel?: string, llmApiKey?: string): Promise<QueryResult> {
-    const results = (await this.client.searchV4(query, 10)).filter(d => !this.isSummary(d))
+    const results = (await this.client.searchQuery(query, 10)).filter(d => !this.isSummary(d))
     const recent = (await this.client.listDocuments(25)).filter(d => !this.isSummary(d))
     const seen = new Set(results.map(r => r.id))
     const combined = [...results, ...recent.filter(r => !seen.has(r.id))]
@@ -144,7 +144,7 @@ ${events.slice(0, 60).map(e => `[${e.source}] ${e.content}${e.metadata.app ? ` (
       metadata: {
         project: session.project,
         tags: ['_auto_summary', session.project],
-        app: 'smt',
+        app: 'trace',
       },
       timestamp: session.endTime,
     }

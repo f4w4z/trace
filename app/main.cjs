@@ -69,10 +69,18 @@ function createWindow() {
 
   win.loadFile(path.join(__dirname, 'index.html'))
 
+  let blurTimer = null
   win.on('blur', () => {
-    if (win && win.isVisible()) {
-      win.webContents.send('blur-hide')
-    }
+    if (blurTimer) return
+    blurTimer = setTimeout(() => {
+      blurTimer = null
+      if (win && win.isVisible()) {
+        win.webContents.send('blur-hide')
+      }
+    }, 300)
+  })
+  win.on('focus', () => {
+    if (blurTimer) { clearTimeout(blurTimer); blurTimer = null }
   })
 
   win.on('closed', () => { win = null })
@@ -90,7 +98,10 @@ function toggleWindow() {
 }
 
 function createTray() {
-  const icon = nativeImage.createEmpty()
+  const iconPath = path.join(__dirname, 'assets', 'icon.png')
+  let icon
+  try { icon = nativeImage.createFromPath(iconPath).resize({ width: 16, height: 16 }) } catch {}
+  if (!icon || icon.isEmpty()) icon = nativeImage.createEmpty()
   tray = new Tray(icon)
   tray.setToolTip('smt — Context Search')
   tray.setContextMenu(Menu.buildFromTemplate([

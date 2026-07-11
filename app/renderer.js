@@ -75,7 +75,8 @@ function renderSummary(data) {
     summary.classList.remove('visible')
     return
   }
-  summaryText.textContent = data.text
+  document.getElementById('summary-loading').classList.remove('visible')
+  summaryText.innerHTML = renderMarkdown(escape(data.text))
   summaryStats.innerHTML = ''
   const chips = []
   if (data.stats?.total) chips.push(`<div class="stat-chip"><b>${data.stats.total}</b> events</div>`)
@@ -92,6 +93,16 @@ function escape(s, max) {
   const d = document.createElement('div')
   d.textContent = max ? String(s).slice(0, max) : String(s)
   return d.innerHTML
+}
+
+function renderMarkdown(s) {
+  if (!s) return ''
+  return s
+    .replace(/\*\*(.+?)\*\*/g, '<b>$1</b>')
+    .replace(/\*(.+?)\*/g, '<i>$1</i>')
+    .replace(/```(\w*)\n?([\s\S]*?)```/g, '<pre><code class="inline-code">$2</code></pre>')
+    .replace(/`([^`]+)`/g, '<code class="inline-code">$1</code>')
+    .replace(/\n/g, '<br>')
 }
 
 function timeAgo(ts) {
@@ -219,7 +230,12 @@ async function pollEvents() {
 }
 
 async function pollSummary() {
+  if (!chatMode) {
+    summary.classList.add('visible')
+    document.getElementById('summary-loading').classList.add('visible')
+  }
   const data = await window.trace.api('GET', '/context/summary')
+  if (!chatMode) document.getElementById('summary-loading').classList.remove('visible')
   if (!data) return
   lastSummary = data
   if (!chatMode) renderSummary(data)
@@ -365,11 +381,11 @@ function renderChatMessage(msg) {
     return
   }
 
-  let text = msg.raw ? msg.text : escape(msg.text).replace(/\n/g, '<br>')
+  let text = msg.raw ? msg.text : renderMarkdown(escape(msg.text))
   let html = `<div class="msg-label">${label} · ${ts}</div>`
 
   if (!msg.raw && msg.full) {
-    let short = escape(msg.short).replace(/\n/g, '<br>')
+    let short = renderMarkdown(escape(msg.short))
     html += `<div class="msg-text msg-text-short">${short} <span class="msg-more">Show more →</span></div>
       <div class="msg-text msg-text-full" style="display:none">${text}</div>`
   } else {

@@ -326,6 +326,21 @@ kbd {
   border-radius: 3px; margin: 0 1px;
   color: rgba(255,255,255,0.15);
 }
+.inline-code {
+  font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+  font-size: 12.5px;
+  background: rgba(255,255,255,0.04);
+  padding: 1px 5px;
+  border-radius: 3px;
+  color: rgba(255,255,255,0.7);
+}
+#summary-loading {
+  display: none;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: rgba(255,255,255,0.15);
+}
+#summary-loading.visible { display: block; }
 </style>
 </head>
 <body>
@@ -342,6 +357,7 @@ kbd {
     </div>
     <div id="content">
       <div id="summary">
+        <div id="summary-loading"><span class="shimmer">Generating summary...</span></div>
         <div id="summary-text"></div>
         <div id="summary-stats"></div>
       </div>

@@ -5,6 +5,8 @@ import { createEvent, timeBucket } from '../utils/events.js'
 import { logger } from '../utils/logger.js'
 
 const PS_SCRIPT = `
+$OutputEncoding = [System.Text.Encoding]::UTF8
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 $loaded = $false
 try {
     Add-Type @"
@@ -116,11 +118,14 @@ function Get-MediaInfo {
     }
     $sessions = $script:smtcMgr.GetSessions()
     foreach ($s in $sessions) {
-      $props = & $script:smtcAwait $s.TryGetMediaPropertiesAsync() ([Windows.Media.Control.GlobalSystemMediaTransportControlsSessionMediaProperties])
-      if ($props -and $props.Title) {
-        $artist = if ($props.Artist) { $props.Artist } else { "" }
-        $title = if ($artist) { "$artist - $($props.Title)" } else { $props.Title }
-        return @{title=$title; app=$s.SourceAppUserModelId}
+      $pi = $s.GetPlaybackInfo()
+      if ($pi -and [int]$pi.PlaybackStatus -eq 4) {
+        $props = & $script:smtcAwait $s.TryGetMediaPropertiesAsync() ([Windows.Media.Control.GlobalSystemMediaTransportControlsSessionMediaProperties])
+        if ($props -and $props.Title) {
+          $artist = if ($props.Artist) { $props.Artist } else { "" }
+          $title = if ($artist) { "$artist - $($props.Title)" } else { $props.Title }
+          return @{title=$title; app=$s.SourceAppUserModelId}
+        }
       }
     }
   } catch { $script:smtcMgr = $null }

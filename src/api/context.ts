@@ -39,12 +39,14 @@ export class ContextService {
     // Broaden search with individual keywords so "listening" can match "Now playing: ..."
     const words = query.toLowerCase().split(/\s+/).filter(w => w.length > 3 && !['what', 'were', 'when', 'where', 'that', 'this', 'there', 'with', 'have', 'been', 'your', 'about', 'tell', 'from'].includes(w))
     for (const word of words) {
-      for (const r of await this.client.searchQuery(word, 10)) {
+      for (const r of await this.client.searchQuery(word, 20)) {
         if (!seen.has(r.id) && !this.isSummary(r)) {
           combined.push(r); seen.add(r.id)
         }
       }
     }
+    // Sort newest-first so keyword matches bubble up into the LLM's 80-item window
+    combined.sort((a, b) => ((b.createdAt ?? '') > (a.createdAt ?? '') ? 1 : -1))
     let answer: string | undefined
     if (llmUrl && llmModel) {
       answer = await this.askLLM(query, combined, llmUrl, llmModel, llmApiKey)

@@ -249,27 +249,18 @@ ${events.slice(0, 60).map(e => `[${e.source}] ${e.content}${e.metadata.app ? ` (
       return this.callLLM(systemPrompt, userPrompt, llmUrl, llmModel, llmApiKey)
     }
 
-    const apps = new Map<string, { count: number; titles: string[]; urls: string[] }>()
+    const items: string[] = []
     for (const m of memories) {
       const app = (m.metadata?.app as string) ?? m.source ?? 'unknown'
-      if (!apps.has(app)) apps.set(app, { count: 0, titles: [], urls: [] })
-      const entry = apps.get(app)!
-      entry.count++
+      const ts = m.createdAt ? new Date(m.createdAt).toLocaleTimeString() : ''
       const text = m.title ?? m.content ?? m.memory ?? m.chunk ?? ''
-      if (text && !entry.titles.includes(text)) entry.titles.push(text)
       const url = m.metadata?.url as string
-      if (url && !entry.urls.includes(url)) entry.urls.push(url)
-    }
-    const lines: string[] = []
-    for (const [app, info] of apps) {
-      lines.push(`App: ${app} (${info.count} events)`)
-      if (info.urls.length) lines.push(`  URLs: ${info.urls.join(', ')}`)
-      if (info.titles.length > 0) {
-        const snippet = info.titles.slice(0, 5).join(' | ')
-        lines.push(`  Titles: ${snippet}`)
+      const detail = url || (m.metadata?.path as string) || ''
+      if (text) {
+        items.push(`[${ts} ${app}] ${text}${detail ? ` (${detail})` : ''}`)
       }
     }
-    const context = lines.join('\n')
+    const context = items.slice(0, 80).join('\n')
 
     const hasData = memories.length > 0
     const systemPrompt = hasData

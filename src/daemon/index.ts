@@ -42,6 +42,9 @@ export class Daemon {
     if (this.config.watchSources.includes('terminal')) {
       this.terminal.start(this.config.shellHistory)
     }
+    if (this.config.watchSources.includes('browser')) {
+      logger.info('browser tracking is always active via system tracker')
+    }
 
     logger.info('daemon running')
   }

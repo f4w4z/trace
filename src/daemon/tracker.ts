@@ -14,7 +14,10 @@ public class WinAPI {
   [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
   [DllImport("user32.dll")] public static extern int GetWindowText(IntPtr hWnd, StringBuilder text, int count);
   [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint pid);
+  [DllImport("user32.dll")] public static extern bool EnumWindows(EnumWindowsProc lpEnumFunc, IntPtr lParam);
+  [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
 }
+public delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
 "@
 $uiLoaded = $false
 function Get-BrowserUrl {
@@ -25,6 +28,7 @@ function Get-BrowserUrl {
   try {
     $el = [System.Windows.Automation.AutomationElement]::FromHandle($hWnd)
     if (-not $el) { return $null }
+    # Primary: search known automation IDs
     foreach ($id in @("omnibox","addressEditBox","urlbar-edit-view","urlbar")) {
       $cond = New-Object System.Windows.Automation.PropertyCondition([System.Windows.Automation.AutomationElement]::AutomationIdProperty, $id)
       $found = $el.FindFirst([System.Windows.Automation.TreeScope]::Descendants, $cond)
@@ -33,10 +37,18 @@ function Get-BrowserUrl {
         if ($vp -and $vp.Current.Value -match '^https?://') { return $vp.Current.Value }
       }
     }
+    # Fallback 1: any Edit control with a URL
     $editCond = New-Object System.Windows.Automation.PropertyCondition([System.Windows.Automation.AutomationElement]::ControlTypeProperty, [System.Windows.Automation.ControlType]::Edit)
     $edits = $el.FindAll([System.Windows.Automation.TreeScope]::Descendants, $editCond)
     foreach ($e in $edits) {
       $vp = $null; try { $vp = $e.GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern) } catch { continue }
+      $val = $vp.Current.Value; if ($val -match '^https?://') { return $val }
+    }
+    # Fallback 2: Document control (used by newer Edge/Chrome)
+    $docCond = New-Object System.Windows.Automation.PropertyCondition([System.Windows.Automation.AutomationElement]::ControlTypeProperty, [System.Windows.Automation.ControlType]::Document)
+    $docs = $el.FindAll([System.Windows.Automation.TreeScope]::Descendants, $docCond)
+    foreach ($d in $docs) {
+      try { $vp = $d.GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern) } catch { continue }
       $val = $vp.Current.Value; if ($val -match '^https?://') { return $val }
     }
   } catch {}
@@ -83,8 +95,12 @@ while ($true) {
   $changed = ($app -ne $lastFgApp -or $title -ne $lastFgTitle)
   if ($changed) {
     $lastFgApp = $app; $lastFgTitle = $title
-    $json = '{"t":"fg","app":' + (ConvertTo-Json $app -Compress) + ',"title":' + (ConvertTo-Json $title -Compress) + ',"pid":' + $procId + ',"ts":' + $epoch + '}'
-    Write-Output $json
+    # Skip self: trace overlay + node server
+    $isSelf = ($app -eq 'electron' -and $title -eq 'trace') -or ($app -eq 'node')
+    if (-not $isSelf) {
+      $json = '{"t":"fg","app":' + (ConvertTo-Json $app -Compress) + ',"title":' + (ConvertTo-Json $title -Compress) + ',"pid":' + $procId + ',"ts":' + $epoch + '}'
+      Write-Output $json
+    }
   }
 
   # Browser URL (every poll, not just on change — the omnibox value changes without window title changing)
@@ -99,16 +115,33 @@ while ($true) {
   # Background media check (Spotify, etc. — even when not foreground)
   $mediaApps = @("spotify","wmplayer","vlc","foobar2000")
   foreach ($m in $mediaApps) {
+    $title = ""
     $mp = Get-Process -Name $m -ErrorAction SilentlyContinue | Select-Object -First 1
-    if ($mp -and $mp.MainWindowTitle -and $mp.MainWindowTitle -ne $lastMediaTitle) {
-      $lastMediaTitle = $mp.MainWindowTitle; $lastMediaApp = $m
-      Write-Output ('{"t":"media","app":"' + $m + '","title":' + (ConvertTo-Json $mp.MainWindowTitle -Compress) + ',"ts":' + $epoch + '}')
+    if ($mp) { $title = $mp.MainWindowTitle }
+    # If MainWindowTitle is empty (minimized to tray), fall back to EnumWindows
+    if ($mp -and -not $title) {
+      $pid = $mp.Id
+      $sb = New-Object System.Text.StringBuilder 512
+      [WinAPI]::EnumWindows({ param($hWnd, $lp)
+        $p = [uint32]0; [WinAPI]::GetWindowThreadProcessId($hWnd, [ref]$p) | Out-Null
+        if ($p -eq $pid) {
+          [WinAPI]::GetWindowText($hWnd, $sb, 512) | Out-Null
+          $t = $sb.ToString().Trim()
+          if ($t) { $script:mediaTitle = $t; return $false }
+        }
+        return $true
+      }, [IntPtr]::Zero)
+      $title = $script:mediaTitle
+    }
+    if ($title -and $title -ne $lastMediaTitle) {
+      $lastMediaTitle = $title; $lastMediaApp = $m
+      Write-Output ('{"t":"media","app":"' + $m + '","title":' + (ConvertTo-Json $title -Compress) + ',"ts":' + $epoch + '}')
     }
   }
 
   # Process snapshot every 10s
   if ($tick % 4 -eq 0) {
-    $procs = Get-Process | Where-Object { $_.MainWindowTitle -ne "" } | Select-Object @{N="n";E={$_.ProcessName}},@{N="p";E={$_.Id}} | ConvertTo-Json -Compress
+    $procs = Get-Process | Where-Object { $_.MainWindowTitle -ne "" -and $_.ProcessName -notin @('electron','node') } | Select-Object @{N="n";E={$_.ProcessName}},@{N="p";E={$_.Id}} | ConvertTo-Json -Compress
     Write-Output ('{"t":"ps","procs":' + $procs + ',"ts":' + $epoch + '}')
   }
 
@@ -267,6 +300,7 @@ export class SystemTracker {
   }
 
   private onForeground(evt: PSForeground): void {
+    if (evt.app === 'electron' || evt.app === 'node') return
     const project = this.guessProject(evt.title, evt.app)
     const content = `${evt.app} · ${evt.title}`
     this.client.addDocument(createEvent('system', 'app_focused', content, {

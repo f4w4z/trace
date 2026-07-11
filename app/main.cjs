@@ -197,10 +197,15 @@ app.whenReady().then(async () => {
   ipcMain.handle('conversation-save', async (_, conv) => {
     const data = loadConvs()
     const idx = data.conversations.findIndex(c => c.id === conv.id)
+    conv.updatedAt = new Date().toISOString()
     if (idx >= 0) {
       data.conversations[idx] = conv
     } else {
       data.conversations.unshift(conv)
+    }
+    // Cap at 50, keep newest
+    if (data.conversations.length > 50) {
+      data.conversations = data.conversations.slice(0, 50)
     }
     data.activeId = conv.id
     return saveConvs(data)

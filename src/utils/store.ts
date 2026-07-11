@@ -31,19 +31,45 @@ export class LocalStore {
         metadata: event.metadata,
         timestamp: event.timestamp.toISOString(),
       }) + '\n'
+
+      // Rotate if oversized (50MB)
+      if (fs.existsSync(DB_PATH)) {
+        const stat = fs.statSync(DB_PATH)
+        if (stat.size > 50 * 1024 * 1024) {
+          for (let i = 3; i >= 1; i--) {
+            const old = DB_PATH + '.' + i
+            const prev = DB_PATH + '.' + (i - 1)
+            if (fs.existsSync(prev)) fs.renameSync(prev, old)
+          }
+          fs.renameSync(DB_PATH, DB_PATH + '.1')
+        }
+      }
+
       fs.appendFileSync(DB_PATH, line, 'utf-8')
     } catch (err) {
       logger.error(`local store append failed: ${err}`)
     }
   }
 
+  private readLines(): string[] {
+    const lines: string[] = []
+    for (const file of [DB_PATH, DB_PATH + '.1', DB_PATH + '.2', DB_PATH + '.3']) {
+      if (!fs.existsSync(file)) continue
+      try {
+        const raw = fs.readFileSync(file, 'utf-8')
+        for (const l of raw.split('\n').filter(Boolean)) {
+          try { JSON.parse(l); lines.push(l) } catch { /* skip corrupt line */ }
+        }
+      } catch { /* skip unreadable file */ }
+    }
+    return lines
+  }
+
   async list(limit = 100): Promise<SupermemoryMemory[]> {
     await this.ready
     try {
-      if (!fs.existsSync(DB_PATH)) return []
-      const raw = fs.readFileSync(DB_PATH, 'utf-8')
-      const lines = raw.trim().split('\n').filter(Boolean).reverse().slice(0, limit)
-      return lines.map(l => {
+      const all = this.readLines().reverse().slice(0, limit)
+      return all.map(l => {
         const e = JSON.parse(l)
         return {
           id: e.id,
@@ -62,11 +88,9 @@ export class LocalStore {
     const q = query.toLowerCase()
     const docs: SupermemoryMemory[] = []
     try {
-      if (!fs.existsSync(DB_PATH)) return []
-      const raw = fs.readFileSync(DB_PATH, 'utf-8')
-      const lines = raw.trim().split('\n').filter(Boolean)
-      for (let i = lines.length - 1; i >= 0 && docs.length < limit; i--) {
-        const e = JSON.parse(lines[i])
+      const all = this.readLines()
+      for (let i = all.length - 1; i >= 0 && docs.length < limit; i--) {
+        const e = JSON.parse(all[i])
         const content = (e.content ?? '').toLowerCase()
         const meta = JSON.stringify(e.metadata ?? {}).toLowerCase()
         if (content.includes(q) || meta.includes(q)) {
@@ -85,7 +109,9 @@ export class LocalStore {
 
   async deleteAll(): Promise<boolean> {
     try {
-      if (fs.existsSync(DB_PATH)) fs.unlinkSync(DB_PATH)
+      for (const file of [DB_PATH, DB_PATH + '.1', DB_PATH + '.2', DB_PATH + '.3']) {
+        if (fs.existsSync(file)) fs.unlinkSync(file)
+      }
       return true
     } catch {
       return false

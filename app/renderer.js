@@ -205,10 +205,16 @@ async function saveCurrentConversation() {
 }
 
 async function loadInitialState() {
-  const list = await window.trace.conversationsList()
-  if (list && list.length) {
-    renderConversations()
+  for (let i = 0; i < 10; i++) {
+    const list = await window.trace.conversationsList()
+    if (list !== null) {
+      if (list.length) renderConversations()
+      return
+    }
+    greetingSub.textContent = 'Connecting...'
+    await new Promise(r => setTimeout(r, 2000))
   }
+  greetingSub.textContent = 'Could not reach server'
 }
 
 // ---- background polling ----
@@ -218,7 +224,10 @@ let lastSummary = null
 
 async function pollEvents() {
   const data = await window.trace.api('GET', '/context/current')
-  if (!data) return
+  if (!data) {
+    if (!eventsKey) greetingSub.textContent = 'Connecting...'
+    return
+  }
   const evts = data.recentEvents ?? []
   const key = evts.map(e => e.id ?? e.content).join('|')
   if (key === eventsKey) return
@@ -356,17 +365,22 @@ async function sendMessage() {
     return
   }
 
-  const data = await window.trace.api('GET', `/context/query?q=${encodeURIComponent(q)}&llm=true`)
-  hideTyping()
-  if (data?.answer) {
-    addAiMsg(data.answer, data.memories ?? [])
-  } else if (data?.memories?.length) {
-    const fallback = data.memories.map(m => m.title ?? m.content ?? m.memory ?? m.chunk ?? '').filter(Boolean).join('\n')
-    addAiMsg(fallback || 'No relevant activity found.', [])
-  } else {
-    addAiMsg('No relevant activity found for that question.', [])
+  try {
+    const data = await window.trace.api('GET', `/context/query?q=${encodeURIComponent(q)}&llm=true`)
+    if (data?.answer) {
+      addAiMsg(data.answer, data.memories ?? [])
+    } else if (data?.memories?.length) {
+      const fallback = data.memories.map(m => m.title ?? m.content ?? m.memory ?? m.chunk ?? '').filter(Boolean).join('\n')
+      addAiMsg(fallback || 'No relevant activity found.', [])
+    } else {
+      addAiMsg('No relevant activity found for that question.', [])
+    }
+  } catch (err) {
+    addAiMsg('Sorry, something went wrong.', [])
+  } finally {
+    hideTyping()
+    scrollToBottom()
   }
-  scrollToBottom()
 }
 
 function renderChatMessage(msg) {
@@ -465,6 +479,13 @@ function addAiMsg(text, memories, raw) {
     if (sepIdx !== -1) {
       short = text.slice(0, sepIdx).trim()
       full = text.slice(sepIdx + 3).trim()
+    } else if (text.length > 200) {
+      // Fallback: first sentence as summary
+      const dotIdx = text.indexOf('. ')
+      if (dotIdx !== -1 && dotIdx < 250) {
+        short = text.slice(0, dotIdx + 1).trim()
+        full = text
+      }
     }
   }
   const msg = { role: 'ai', text, short, full, memories: memories || [], raw: !!raw, timestamp: new Date().toISOString() }

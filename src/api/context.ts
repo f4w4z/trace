@@ -298,6 +298,7 @@ ${context}`
           ],
           stream: false,
         }),
+        signal: AbortSignal.timeout(30000),
       })
       if (!res.ok) {
         logger.warn(`LLM returned ${res.status}`)

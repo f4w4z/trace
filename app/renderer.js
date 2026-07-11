@@ -4,7 +4,7 @@ let username = 'there'
 let activeEvents = []
 let selectedIndex = -1
 let chatMode = false
-let chatHistory = []
+let activeConv = null
 let iconDataUrl = null
 
 const input = document.getElementById('search-input')
@@ -17,6 +17,8 @@ const summaryText = document.getElementById('summary-text')
 const summaryStats = document.getElementById('summary-stats')
 const events = document.getElementById('events')
 const eventsEmpty = document.getElementById('events-empty')
+const convSection = document.getElementById('convs-section')
+const convList = document.getElementById('conv-list')
 const chat = document.getElementById('chat')
 
 window.trace.getIcon().then(url => {
@@ -100,6 +102,104 @@ function timeAgo(ts) {
   return `${Math.floor(m / 60)}h`
 }
 
+function formatTimestamp(ts) {
+  if (!ts) return ''
+  const d = new Date(ts)
+  const now = new Date()
+  const diff = now - d
+  if (diff < 60000) return 'just now'
+  if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`
+  if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`
+  if (d.getFullYear() === now.getFullYear()) return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+}
+
+// ---- conversations ----
+
+async function renderConversations() {
+  const list = await window.trace.conversationsList()
+  if (!list || !list.length) {
+    convSection.classList.remove('visible')
+    return
+  }
+  convSection.classList.add('visible')
+  convList.innerHTML = list.map(c => {
+    const title = c.title || 'New conversation'
+    const date = formatTimestamp(c.createdAt)
+    const preview = c.preview ? escape(c.preview).slice(0, 60) : ''
+    return `<div class="conv-entry" data-id="${c.id}">
+      <div class="conv-entry-icon">💬</div>
+      <div class="conv-entry-body">
+        <div class="conv-entry-title">${escape(title)}</div>
+        <div class="conv-entry-meta">${date} · ${c.messageCount} message${c.messageCount !== 1 ? 's' : ''}${preview ? ' · ' + preview : ''}</div>
+      </div>
+      <button class="conv-del" data-id="${c.id}" title="Delete conversation">✕</button>
+    </div>`
+  }).join('')
+
+  convList.querySelectorAll('.conv-entry').forEach(el => {
+    el.addEventListener('click', (e) => {
+      if (e.target.closest('.conv-del')) return
+      openConversation(el.dataset.id)
+    })
+  })
+  convList.querySelectorAll('.conv-del').forEach(el => {
+    el.addEventListener('click', (e) => {
+      e.stopPropagation()
+      deleteConversation(el.dataset.id)
+    })
+  })
+}
+
+async function openConversation(id) {
+  const conv = await window.trace.conversationGet(id)
+  if (!conv) return
+  activeConv = conv
+  chat.innerHTML = ''
+  for (const msg of conv.messages) {
+    renderChatMessage(msg)
+  }
+  enterChat()
+  scrollToBottom()
+}
+
+async function deleteConversation(id) {
+  await window.trace.conversationDelete(id)
+  if (activeConv && activeConv.id === id) {
+    activeConv = null
+    exitChat()
+  }
+  renderConversations()
+}
+
+async function startNewConversation() {
+  if (activeConv && activeConv.messages.length === 0) return
+  activeConv = {
+    id: 'conv_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+    title: '',
+    createdAt: new Date().toISOString(),
+    messages: [],
+  }
+  chat.innerHTML = ''
+  enterChat()
+}
+
+async function saveCurrentConversation() {
+  if (!activeConv || !activeConv.messages.length) return
+  if (!activeConv.title) {
+    const first = activeConv.messages.find(m => m.role === 'user')
+    if (first) activeConv.title = first.text.slice(0, 80)
+  }
+  await window.trace.conversationSave(activeConv)
+}
+
+async function loadInitialState() {
+  const list = await window.trace.conversationsList()
+  if (list && list.length) {
+    renderConversations()
+  }
+}
+
 // ---- background polling ----
 
 let eventsKey = ''
@@ -134,7 +234,7 @@ function closeWindow() {
   }, { once: true })
 }
 
-loadHistory()
+loadInitialState()
 pollEvents()
 pollSummary()
 setInterval(pollEvents, 5000)
@@ -175,6 +275,7 @@ sendBtn.addEventListener('click', () => sendMessage())
 
 const COMMANDS = {
   help: { desc: 'Show available commands' },
+  new: { desc: 'Start a new conversation' },
   restart: { desc: 'Restart the entire app' },
   'restart-server': { desc: 'Restart the trace server only' },
   clear: { desc: 'Delete all stored memories' },
@@ -219,6 +320,13 @@ async function sendMessage() {
   input.value = ''
   sendBtn.classList.remove('active')
 
+  if (q.trim() === '/new') {
+    if (!chatMode) startNewConversation()
+    else { chat.innerHTML = ''; activeConv = null; startNewConversation() }
+    input.focus()
+    return
+  }
+
   if (!chatMode) enterChat()
   addUserMsg(q)
   showTyping()
@@ -245,62 +353,43 @@ async function sendMessage() {
   scrollToBottom()
 }
 
-async function saveHistory() {
-  await window.trace.saveChat(chatHistory)
-}
-
-async function loadHistory() {
-  const saved = await window.trace.loadChat()
-  if (saved && saved.length) {
-    chatHistory = saved
-    enterChat()
-    for (const msg of chatHistory) {
-      if (msg.role === 'user') {
-        renderUserMsg(msg.text)
-      } else {
-        renderAiMsg(msg.text, msg.memories || [], msg.raw)
-      }
+function renderChatMessage(msg) {
+  const el = document.createElement('div')
+  el.className = `chat-msg ${msg.role}`
+  if (msg.role === 'user') {
+    el.innerHTML = `<div class="chat-bubble">${escape(msg.text)}<div class="chat-time">${formatTimestamp(msg.timestamp)}</div></div>`
+  } else {
+    const text = msg.raw
+      ? msg.text
+      : escape(msg.text).replace(/\n/g, '<br>')
+    let html = `<div class="chat-bubble">${text}<div class="chat-time">${formatTimestamp(msg.timestamp)}</div></div>`
+    const memories = msg.memories || []
+    if (memories.length) {
+      html += '<div class="chat-events">'
+      html += memories.slice(0, 6).map(m => {
+        const s = m.metadata?.source ?? 'filesystem'
+        const icon = ICONS[s] ?? '📄'
+        const title = m.title ?? m.content ?? m.memory ?? m.chunk ?? ''
+        const detail = m.metadata?.path ?? m.metadata?.url ?? m.metadata?.project ?? ''
+        return `<div class="event-item">
+          <div class="event-icon ${s}">${icon}</div>
+          <div class="event-body">
+            <div class="event-title">${escape(title)}</div>
+            ${detail ? `<div class="event-detail">${escape(detail)}</div>` : ''}
+          </div>
+        </div>`
+      }).join('')
+      html += '</div>'
     }
+    el.innerHTML = html
   }
-}
-
-function renderUserMsg(text) {
-  const el = document.createElement('div')
-  el.className = 'chat-msg user'
-  el.innerHTML = `<div class="chat-bubble">${escape(text)}</div>`
-  chat.appendChild(el)
-}
-
-function renderAiMsg(text, memories, raw) {
-  const el = document.createElement('div')
-  el.className = 'chat-msg ai'
-  let html = raw
-    ? `<div class="chat-bubble">${text}</div>`
-    : `<div class="chat-bubble">${escape(text).replace(/\n/g, '<br>')}</div>`
-  if (memories.length) {
-    html += '<div class="chat-events">'
-    html += memories.slice(0, 6).map(m => {
-      const s = m.metadata?.source ?? 'filesystem'
-      const icon = ICONS[s] ?? '📄'
-      const title = m.title ?? m.content ?? m.memory ?? m.chunk ?? ''
-      const detail = m.metadata?.path ?? m.metadata?.url ?? m.metadata?.project ?? ''
-      return `<div class="event-item">
-        <div class="event-icon ${s}">${icon}</div>
-        <div class="event-body">
-          <div class="event-title">${escape(title)}</div>
-          ${detail ? `<div class="event-detail">${escape(detail)}</div>` : ''}
-        </div>
-      </div>`
-    }).join('')
-    html += '</div>'
-  }
-  el.innerHTML = html
   chat.appendChild(el)
 }
 
 function enterChat() {
   chatMode = true
   summary.classList.remove('visible')
+  convSection.classList.remove('visible')
   events.style.display = 'none'
   chat.style.display = 'flex'
 }
@@ -312,18 +401,28 @@ function exitChat() {
   summary.classList.remove('hidden')
   renderSummary(lastSummary)
   renderEvents()
+  renderConversations()
 }
 
 function addUserMsg(text) {
-  chatHistory.push({ role: 'user', text })
-  renderUserMsg(text)
-  saveHistory()
+  if (!activeConv) activeConv = {
+    id: 'conv_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+    title: '',
+    createdAt: new Date().toISOString(),
+    messages: [],
+  }
+  const msg = { role: 'user', text, timestamp: new Date().toISOString() }
+  activeConv.messages.push(msg)
+  renderChatMessage(msg)
+  saveCurrentConversation()
 }
 
 function addAiMsg(text, memories, raw) {
-  chatHistory.push({ role: 'ai', text, memories: memories || [], raw: !!raw })
-  renderAiMsg(text, memories || [], raw)
-  saveHistory()
+  if (!activeConv) return
+  const msg = { role: 'ai', text, memories: memories || [], raw: !!raw, timestamp: new Date().toISOString() }
+  activeConv.messages.push(msg)
+  renderChatMessage(msg)
+  saveCurrentConversation()
 }
 
 function showTyping() {

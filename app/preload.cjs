@@ -9,6 +9,8 @@ contextBridge.exposeInMainWorld('trace', {
   hideWindow: () => ipcRenderer.send('hide-window'),
   getIcon: () => ipcRenderer.invoke('get-icon'),
   execCommand: (cmd) => ipcRenderer.invoke('exec-command', cmd),
-  saveChat: (msgs) => ipcRenderer.invoke('save-chat', msgs),
-  loadChat: () => ipcRenderer.invoke('load-chat'),
+  conversationsList: () => ipcRenderer.invoke('conversations-list'),
+  conversationGet: (id) => ipcRenderer.invoke('conversation-get', id),
+  conversationSave: (conv) => ipcRenderer.invoke('conversation-save', conv),
+  conversationDelete: (id) => ipcRenderer.invoke('conversation-delete', id),
 })

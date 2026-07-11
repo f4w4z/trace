@@ -163,20 +163,54 @@ app.whenReady().then(async () => {
     if (win && win.isVisible()) win.hide()
   })
 
-  const chatPath = path.join(app.getPath('userData'), 'chat-history.json')
+  const convPath = path.join(app.getPath('userData'), 'conversations.json')
 
-  ipcMain.handle('save-chat', async (_, messages) => {
+  function loadConvs() {
     try {
-      fs.writeFileSync(chatPath, JSON.stringify(messages), 'utf-8')
-      return true
-    } catch { return false }
+      if (!fs.existsSync(convPath)) return { conversations: [], activeId: null }
+      return JSON.parse(fs.readFileSync(convPath, 'utf-8'))
+    } catch { return { conversations: [], activeId: null } }
+  }
+
+  function saveConvs(data) {
+    try { fs.writeFileSync(convPath, JSON.stringify(data), 'utf-8'); return true }
+    catch { return false }
+  }
+
+  ipcMain.handle('conversations-list', async () => {
+    const data = loadConvs()
+    return data.conversations.map(c => ({
+      id: c.id,
+      title: c.title,
+      createdAt: c.createdAt,
+      messageCount: c.messages.length,
+      preview: c.messages.length > 0 ? (c.messages[0].text || '').slice(0, 80) : '',
+    }))
   })
 
-  ipcMain.handle('load-chat', async () => {
-    try {
-      if (!fs.existsSync(chatPath)) return []
-      return JSON.parse(fs.readFileSync(chatPath, 'utf-8'))
-    } catch { return [] }
+  ipcMain.handle('conversation-get', async (_, id) => {
+    const data = loadConvs()
+    const conv = data.conversations.find(c => c.id === id)
+    return conv || null
+  })
+
+  ipcMain.handle('conversation-save', async (_, conv) => {
+    const data = loadConvs()
+    const idx = data.conversations.findIndex(c => c.id === conv.id)
+    if (idx >= 0) {
+      data.conversations[idx] = conv
+    } else {
+      data.conversations.unshift(conv)
+    }
+    data.activeId = conv.id
+    return saveConvs(data)
+  })
+
+  ipcMain.handle('conversation-delete', async (_, id) => {
+    const data = loadConvs()
+    data.conversations = data.conversations.filter(c => c.id !== id)
+    if (data.activeId === id) data.activeId = data.conversations[0]?.id || null
+    return saveConvs(data)
   })
 
   ipcMain.handle('exec-command', async (_, cmd) => {

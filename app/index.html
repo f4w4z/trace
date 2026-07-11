@@ -123,6 +123,64 @@ html, body {
   scroll-behavior: smooth;
 }
 #chat { display: none; flex-direction: column; gap: 0; }
+#convs-section { display: none; }
+#convs-section.visible { display: block; }
+#convs-header {
+  padding: 16px 22px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.1);
+}
+.conv-entry {
+  display: flex; align-items: center;
+  padding: 8px 22px;
+  gap: 10px;
+  cursor: pointer;
+  transition: background 0.1s;
+  animation: slideIn 0.2s ease both;
+}
+.conv-entry:hover { background: rgba(255,255,255,0.02); }
+.conv-entry-icon {
+  width: 28px; height: 28px;
+  border-radius: 6px;
+  background: rgba(255,255,255,0.03);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  font-size: 12px;
+  color: rgba(255,255,255,0.12);
+}
+.conv-entry-body { flex: 1; min-width: 0; }
+.conv-entry-title {
+  font-size: 13px;
+  color: rgba(255,255,255,0.65);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.conv-entry-meta {
+  font-size: 11px;
+  color: rgba(255,255,255,0.12);
+  margin-top: 1px;
+}
+.conv-del {
+  width: 20px; height: 20px;
+  border-radius: 4px;
+  border: none; background: transparent;
+  color: rgba(255,255,255,0.06);
+  cursor: pointer;
+  font-size: 11px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity 0.1s, color 0.1s, background 0.1s;
+}
+.conv-entry:hover .conv-del { opacity: 1; }
+.conv-del:hover { color: #ff4444; background: rgba(255,68,68,0.08); }
+#convs-empty {
+  padding: 4px 22px 0;
+  font-size: 12px;
+  color: rgba(255,255,255,0.08);
+}
 #events::-webkit-scrollbar, #chat::-webkit-scrollbar { width: 3px; }
 #events::-webkit-scrollbar-track, #chat::-webkit-scrollbar-track { background: transparent; }
 #events::-webkit-scrollbar-thumb, #chat::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.06); border-radius: 2px; }
@@ -222,6 +280,14 @@ html, body {
 .chat-msg.ai .chat-events .event-item .event-detail {
   font-size: 10px;
 }
+.chat-time {
+  font-size: 10px;
+  color: rgba(255,255,255,0.08);
+  margin-top: 3px;
+  font-variant-numeric: tabular-nums;
+}
+.chat-msg.user .chat-time { text-align: right; }
+.chat-msg.ai .chat-time { text-align: left; }
 /* Typing indicator */
 .typing-indicator {
   padding: 10px 22px;
@@ -288,6 +354,10 @@ kbd {
         <div id="summary-text"></div>
         <div id="summary-stats"></div>
       </div>
+      <div id="convs-section">
+        <div id="convs-header">Past conversations</div>
+        <div id="conv-list"></div>
+      </div>
       <div id="events">
         <div id="events-empty">
           <span style="font-size:24px;opacity:0.3">~</span>
@@ -299,8 +369,8 @@ kbd {
   </div>
   <div id="footer">
     <span><kbd>↵</kbd> ask</span>
-    <span><kbd>/</kbd><kbd>help</kbd> commands</span>
-    <span><kbd>Esc</kbd> clear / close</span>
+    <span><kbd>/</kbd><kbd>new</kbd> new chat</span>
+    <span><kbd>Esc</kbd> back / close</span>
   </div>
 </div>
 <script src="renderer.js"></script>

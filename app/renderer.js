@@ -413,7 +413,6 @@ function renderChatMessage(msg) {
 function enterChat() {
   chatMode = true
   summary.classList.remove('visible')
-  convSection.classList.remove('visible')
   events.style.display = 'none'
   chat.style.display = 'flex'
 }

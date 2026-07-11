@@ -76,6 +76,7 @@ html, body {
   flex: 1; min-height: 0;
   display: flex; flex-direction: column;
   position: relative;
+  overflow: hidden;
 }
 #greeting {
   padding: 28px 22px 8px;
@@ -344,11 +345,11 @@ kbd {
         <div id="summary-text"></div>
         <div id="summary-stats"></div>
       </div>
-      <div id="convs-section">
-        <div id="convs-header">Past conversations</div>
-        <div id="conv-list"></div>
-      </div>
       <div id="events">
+        <div id="convs-section">
+          <div id="convs-header">Past conversations</div>
+          <div id="conv-list"></div>
+        </div>
         <div id="events-empty">
           <span style="font-size:24px;opacity:0.3">~</span>
           <span>No activity yet</span>

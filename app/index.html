@@ -22,8 +22,6 @@ html, body {
   border-radius: 16px;
   display: flex; flex-direction: column;
   overflow: hidden;
-  -webkit-mask-image: -webkit-radial-gradient(white, black);
-  mask-image: radial-gradient(white, black);
   animation: popIn 0.18s cubic-bezier(0.16,1,0.3,1);
 }
 @keyframes popIn {
@@ -61,33 +59,20 @@ html, body {
 #ai-badge {
   display: none;
   font-size: 11px; font-weight: 600;
-  color: #8b5cf6;
-  background: rgba(139,92,246,0.12);
+  color: rgba(255,255,255,0.7);
+  background: rgba(255,255,255,0.06);
   padding: 2px 7px;
-  border-radius: 5px;
+  border-radius: 4px;
   letter-spacing: 0.3px;
   white-space: nowrap;
   pointer-events: none;
   transition: opacity 0.2s;
   flex-shrink: 0;
 }
-#search-row.ai-mode { border-bottom-color: rgba(139,92,246,0.3); }
+#search-row.ai-mode { border-bottom-color: rgba(255,255,255,0.15); }
 #search-row.ai-mode #ai-badge { display: inline; }
-#search-row.ai-mode #search-input::placeholder { color: rgba(139,92,246,0.25); }
-#send-btn {
-  background: rgba(255,255,255,0.04);
-  border: none; outline: none;
-  color: rgba(255,255,255,0.2);
-  cursor: pointer;
-  width: 28px; height: 28px;
-  border-radius: 8px;
-  font-size: 14px;
-  display: none;
-  align-items: center; justify-content: center;
-  transition: background 0.15s, color 0.15s;
-}
-#send-btn.active { display: flex; }
-#send-btn.active:hover { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.7); }
+#search-row.ai-mode #search-input::placeholder { color: rgba(255,255,255,0.3); }
+
 #body {
   flex: 1; min-height: 0;
   display: flex; flex-direction: column;
@@ -232,12 +217,9 @@ html, body {
   display: flex; align-items: center; justify-content: center;
   flex-shrink: 0; font-size: 11px; margin-top: 1px;
 }
-.event-icon.filesystem { background: rgba(90,200,250,0.08); color: #5ac8fa; }
-.event-icon.browser { background: rgba(100,210,255,0.08); color: #64d2ff; }
-.event-icon.editor { background: rgba(175,130,255,0.08); color: #af82ff; }
-.event-icon.terminal { background: rgba(50,215,75,0.08); color: #32d74b; }
-.event-icon.system { background: rgba(255,159,10,0.08); color: #ff9f0a; }
-.event-icon.media { background: rgba(90,200,250,0.08); color: #5ac8fa; }
+.event-icon.filesystem, .event-icon.browser, .event-icon.editor, .event-icon.terminal, .event-icon.system, .event-icon.media {
+  background: rgba(255,255,255,0.04); color: rgba(255,255,255,0.65);
+}
 .event-body { flex: 1; min-width: 0; }
 .event-title {
   font-size: 13px; color: #c8c8d2;
@@ -251,13 +233,12 @@ html, body {
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .event-link {
-  color: rgba(100, 210, 255, 0.75);
-  text-decoration: none;
+  color: rgba(255, 255, 255, 0.45);
+  text-decoration: underline;
   transition: color 0.15s;
 }
 .event-link:hover {
-  color: rgba(100, 210, 255, 1);
-  text-decoration: underline;
+  color: #fff;
 }
 .event-time {
   font-size: 11px;
@@ -289,13 +270,13 @@ html, body {
 }
 .msg-more {
   display: inline;
-  color: rgba(100,210,255,0.6);
+  color: rgba(255,255,255,0.4);
   cursor: pointer;
   font-size: 13px;
   white-space: nowrap;
   transition: color 0.1s;
 }
-.msg-more:hover { color: rgba(100,210,255,0.9); }
+.msg-more:hover { color: #fff; text-decoration: underline; }
 .msg-memories {
   margin-top: 12px;
   display: flex;
@@ -379,107 +360,130 @@ kbd {
   position: fixed; inset: 0; z-index: 100;
   display: none;
   align-items: center; justify-content: center;
-  background: rgba(0,0,0,0.5);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
+  background: rgba(0,0,0,0.4);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
   animation: fadeIn 0.2s ease;
 }
 #onboarding-overlay.visible { display: flex; }
 @keyframes fadeIn { from { opacity:0 } to { opacity:1 } }
 #onboarding {
-  width: 420px; max-width: 90vw;
-  background: #1a1a20;
-  border-radius: 16px;
-  padding: 32px;
-  box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+  width: 440px; max-width: 90vw;
+  background: #111113;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.5);
   animation: popIn 0.25s cubic-bezier(0.16,1,0.3,1);
 }
 #onboarding-steps {
   display: flex; align-items: center; justify-content: center;
-  gap: 0; margin-bottom: 28px;
+  gap: 0; margin-bottom: 20px;
 }
 .onb-step { display: flex; align-items: center; gap: 0; }
 .onb-step-icon {
-  width: 26px; height: 26px; border-radius: 50%;
+  width: 22px; height: 22px; border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
-  font-size: 12px; font-weight: 600;
-  background: rgba(255,255,255,0.06);
-  color: rgba(255,255,255,0.2);
-  transition: all 0.25s;
+  font-size: 11px; font-weight: 600;
+  border: 1.5px solid rgba(255,255,255,0.12);
+  color: rgba(255,255,255,0.3);
+  transition: all 0.25s ease;
 }
 .onb-step.active .onb-step-icon {
-  background: #6c8cff;
-  color: #fff;
+  background: #fff;
+  border-color: #fff;
+  color: #000;
 }
 .onb-step.done .onb-step-icon {
-  background: #32d74b;
-  color: #fff;
+  background: transparent;
+  border-color: rgba(255,255,255,0.4);
+  color: rgba(255,255,255,0.7);
 }
-.onb-step.done .onb-step-icon::after { content: ''; }
 .onb-step-line {
-  width: 32px; height: 2px;
-  background: rgba(255,255,255,0.06);
-  margin: 0 6px;
-  transition: background 0.25s;
+  width: 24px; height: 1.5px;
+  background: rgba(255,255,255,0.08);
+  margin: 0 4px;
+  transition: background 0.25s ease;
 }
-.onb-step.done + .onb-step .onb-step-line { background: rgba(50,215,75,0.3); }
+.onb-step.done + .onb-step .onb-step-line { background: rgba(255,255,255,0.3); }
 .onb-panel { display: none; flex-direction: column; align-items: center; text-align: center; }
-.onb-panel.visible { display: flex; }
+.onb-panel.visible {
+  display: flex;
+  animation: panelFadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@keyframes panelFadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
 .onb-logo {
-  width: 48px; height: 48px; border-radius: 14px;
-  background: linear-gradient(135deg, #6c8cff, #8b5cf6);
+  font-size: 22px; font-weight: 700; color: #fff;
+  margin-bottom: 12px;
+  letter-spacing: -0.5px;
+}
+.onb-logo.check-circle {
+  width: 44px; height: 44px; border-radius: 50%;
+  border: 1.5px solid rgba(255,255,255,0.3);
   display: flex; align-items: center; justify-content: center;
-  font-size: 18px; font-weight: 700; color: #fff;
-  margin-bottom: 16px;
+  font-size: 18px; font-weight: 600; color: #fff;
+  margin-bottom: 12px;
+  background: none;
+}
+.onb-logo-img {
+  width: 48px;
+  height: 48px;
+  margin-bottom: 12px;
+  object-fit: contain;
 }
 .onb-title {
-  font-size: 20px; font-weight: 700;
+  font-size: 18px; font-weight: 600;
   color: #fff; margin-bottom: 6px;
 }
 .onb-desc {
-  font-size: 13px; line-height: 1.5;
-  color: rgba(255,255,255,0.35);
-  margin-bottom: 20px; max-width: 320px;
+  font-size: 12.5px; line-height: 1.45;
+  color: rgba(255,255,255,0.4);
+  margin-bottom: 16px; max-width: 320px;
 }
 .onb-input {
   width: 100%; max-width: 280px;
-  padding: 10px 14px;
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.08);
-  border-radius: 10px;
+  padding: 8px 12px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 8px;
   color: #fff;
-  font-size: 15px; font-family: inherit;
+  font-size: 14px; font-family: inherit;
   outline: none; text-align: center;
   margin-bottom: 16px;
-  transition: border-color 0.15s;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
 }
-.onb-input:focus { border-color: rgba(108,140,255,0.4); }
-.onb-input::placeholder { color: rgba(255,255,255,0.15); }
+.onb-input:focus { border-color: rgba(255,255,255,0.35); }
+.onb-input::placeholder { color: rgba(255,255,255,0.25); }
 .onb-btn {
-  padding: 8px 22px;
-  border: none; border-radius: 8px;
-  background: rgba(255,255,255,0.06);
+  padding: 7px 20px;
+  border: none; border-radius: 6px;
+  background: rgba(255,255,255,0.05);
   color: rgba(255,255,255,0.6);
-  font-size: 14px; font-family: inherit;
+  font-size: 13.5px; font-family: inherit;
   cursor: pointer;
-  transition: background 0.15s, color 0.15s;
+  transition: background 0.2s ease, transform 0.1s ease, color 0.2s ease;
 }
-.onb-btn:hover { background: rgba(255,255,255,0.1); color: #fff; }
-.onb-btn-primary { background: #6c8cff; color: #fff; font-weight: 600; }
-.onb-btn-primary:hover { background: #5a7ae8; }
+.onb-btn:hover { background: rgba(255,255,255,0.08); color: #fff; }
+.onb-btn:active { transform: scale(0.98); }
+.onb-btn-primary { background: #fff; color: #000; font-weight: 600; }
+.onb-btn-primary:hover { background: #d4d4d8; color: #000; }
 /* Theme cards */
-.onb-themes { display: flex; gap: 12px; margin-bottom: 20px; }
+.onb-themes { display: flex; gap: 12px; margin-bottom: 16px; }
 .onb-theme-card {
-  width: 140px; padding: 12px;
-  border-radius: 12px;
-  border: 2px solid rgba(255,255,255,0.06);
+  width: 125px; padding: 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.08);
   cursor: pointer;
-  transition: border-color 0.15s, background 0.15s;
+  transition: border-color 0.2s ease, background 0.2s ease, transform 0.2s ease;
 }
-.onb-theme-card.selected { border-color: #6c8cff; background: rgba(108,140,255,0.06); }
-.onb-theme-card:hover { border-color: rgba(108,140,255,0.3); }
+.onb-theme-card.selected { border-color: #fff; background: rgba(255,255,255,0.03); }
+.onb-theme-card:hover { border-color: rgba(255,255,255,0.2); transform: translateY(-2px); }
+.onb-theme-card:active { transform: translateY(0); }
 .onb-theme-preview {
-  height: 70px; border-radius: 8px; overflow: hidden;
+  height: 60px; border-radius: 6px; overflow: hidden;
   margin-bottom: 8px;
 }
 .dark-preview { background: #121216; }
@@ -495,95 +499,280 @@ kbd {
 /* Toggle */
 .onb-toggle-row {
   display: flex; align-items: center; justify-content: space-between;
-  width: 100%; max-width: 300px; padding: 10px 0; margin-bottom: 20px;
+  width: 100%; max-width: 280px; padding: 6px 0; margin-bottom: 16px;
 }
-.onb-toggle-label { font-size: 14px; color: rgba(255,255,255,0.7); }
+.onb-toggle-label { font-size: 13.5px; color: rgba(255,255,255,0.7); }
 .onb-toggle { position: relative; display: inline-block; width: 40px; height: 22px; cursor: pointer; }
 .onb-toggle input { display: none; }
 .onb-toggle-slider {
   position: absolute; inset: 0;
   background: rgba(255,255,255,0.08);
   border-radius: 22px;
-  transition: background 0.2s;
+  transition: background 0.2s ease;
 }
 .onb-toggle-slider::before {
   content: ''; position: absolute;
   width: 18px; height: 18px; left: 2px; bottom: 2px;
-  background: #fff; border-radius: 50%;
-  transition: transform 0.2s;
+  background: #1a1a20; border-radius: 50%;
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.2s;
 }
-.onb-toggle input:checked + .onb-toggle-slider { background: #32d74b; }
-.onb-toggle input:checked + .onb-toggle-slider::before { transform: translateX(18px); }
+.onb-toggle input:checked + .onb-toggle-slider { background: #fff; }
+.onb-toggle input:checked + .onb-toggle-slider::before { transform: translateX(18px); background: #1a1a20; }
 /* Source checkboxes */
-.onb-sources { display: flex; flex-direction: column; gap: 6px; width: 100%; margin-bottom: 20px; }
-.onb-source {
-  display: flex; align-items: center; gap: 10px;
-  padding: 10px 14px;
-  border-radius: 10px;
-  border: 2px solid rgba(255,255,255,0.06);
-  cursor: pointer;
-  transition: border-color 0.15s, background 0.15s;
+.onb-sources {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 320px;
+  margin-bottom: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  overflow: hidden;
 }
-.onb-source.checked { border-color: rgba(108,140,255,0.3); background: rgba(108,140,255,0.04); }
-.onb-source-icon { font-size: 16px; width: 28px; text-align: center; }
-.onb-source-info { display: flex; flex-direction: column; text-align: left; }
-.onb-source-name { font-size: 14px; font-weight: 500; color: rgba(255,255,255,0.7); }
-.onb-source-desc { font-size: 11px; color: rgba(255,255,255,0.25); }
+.onb-source {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: rgba(255, 255, 255, 0.01);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+.onb-source:last-child {
+  border-bottom: none;
+}
+.onb-source:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+.onb-source-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.onb-source-name {
+  font-size: 13.5px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.85);
+}
+.onb-source-checkbox {
+  width: 16px;
+  height: 16px;
+  border: 1.5px solid rgba(255, 255, 255, 0.25);
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.onb-source.checked .onb-source-checkbox {
+  background: #fff;
+  border-color: #fff;
+}
+.onb-source-checkbox::after {
+  content: '✓';
+  font-size: 10px;
+  font-weight: bold;
+  color: #000;
+  position: absolute;
+  opacity: 0;
+  transform: scale(0.5);
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.15s ease;
+}
+.onb-source.checked .onb-source-checkbox::after {
+  opacity: 1;
+  transform: scale(1);
+}
 /* Summary */
-.onb-summary { width: 100%; margin-bottom: 20px; }
+.onb-summary { width: 100%; margin-bottom: 16px; }
 .onb-summary-row {
   display: flex; justify-content: space-between;
   padding: 8px 0;
-  border-bottom: 1px solid rgba(255,255,255,0.03);
+  border-bottom: 1px solid rgba(255,255,255,0.05);
   font-size: 13px;
 }
-.onb-summary-row span:first-child { color: rgba(255,255,255,0.25); }
-.onb-summary-row span:last-child { color: rgba(255,255,255,0.7); font-weight: 500; }
+.onb-summary-row span:first-child { color: rgba(255,255,255,0.4); }
+.onb-summary-row span:last-child { color: rgba(255,255,255,0.85); font-weight: 500; }
+
+/* Command styling */
+.cmd-name {
+  display: inline-block;
+  padding: 0 5px;
+  font-weight: 500;
+  color: rgba(100, 210, 255, 0.7);
+}
+.cmd-help-list {
+  font-size: 13.5px;
+  line-height: 2.2;
+}
+.chat-conv-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 4px 0;
+}
+.chat-conv-header {
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: #fff;
+}
+.chat-conv-entry {
+  padding: 10px;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  margin-bottom: 8px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.chat-conv-entry:hover {
+  background: rgba(255,255,255,0.02);
+}
+.chat-conv-title {
+  font-weight: 600;
+  color: rgba(100, 210, 255, 0.9);
+}
+.chat-conv-meta {
+  font-size: 11px;
+  color: rgba(255,255,255,0.3);
+}
+.chat-conv-preview {
+  color: rgba(255,255,255,0.25);
+}
+
 /* Light theme overrides */
-body.light #window { background: #f0f0f2; }
-body.light #search-input { color: #1a1a20; }
-body.light #search-input::placeholder { color: rgba(0,0,0,0.15); }
-body.light #greeting-text { color: #1a1a20; }
-body.light #greeting-sub { color: rgba(0,0,0,0.25); }
-body.light .event-title { color: #2a2a30; }
-body.light .event-detail { color: rgba(0,0,0,0.2); }
-body.light .event-time { color: rgba(0,0,0,0.12); }
-body.light .msg-text { color: #3a3a40; }
-body.light .chat-msg.user .msg-text { color: rgba(0,0,0,0.35); }
-body.light .onb-summary-row span:first-child { color: rgba(0,0,0,0.2); }
-body.light .onb-summary-row span:last-child { color: #1a1a20; }
-body.light .stat-chip { border-color: rgba(0,0,0,0.04); color: rgba(0,0,0,0.15); background: rgba(0,0,0,0.02); }
-body.light .stat-chip b { color: rgba(0,0,0,0.3); }
-body.light .conv-entry-title { color: #2a2a30; }
-body.light .conv-entry-meta { color: rgba(0,0,0,0.12); }
-body.light #convs-header { color: rgba(0,0,0,0.08); }
-body.light .msg-label { color: rgba(0,0,0,0.1); }
-body.light .inline-code { background: rgba(0,0,0,0.04); color: rgba(0,0,0,0.5); }
-body.light #footer { color: rgba(0,0,0,0.08); }
-body.light kbd { background: rgba(0,0,0,0.03); border-color: rgba(0,0,0,0.04); color: rgba(0,0,0,0.1); }
-body.light #onboarding { background: #ffffff; }
-body.light .onb-title { color: #1a1a20; }
-body.light .onb-desc { color: rgba(0,0,0,0.3); }
-body.light .onb-input { background: rgba(0,0,0,0.03); border-color: rgba(0,0,0,0.08); color: #1a1a20; }
-body.light .onb-input::placeholder { color: rgba(0,0,0,0.12); }
-body.light .onb-btn { background: rgba(0,0,0,0.04); color: rgba(0,0,0,0.4); }
-body.light .onb-btn:hover { background: rgba(0,0,0,0.08); color: #1a1a20; }
-body.light .onb-summary-row { border-bottom-color: rgba(0,0,0,0.03); }
-body.light .onb-source-name { color: rgba(0,0,0,0.6); }
-body.light .onb-source-desc { color: rgba(0,0,0,0.2); }
-body.light .onb-toggle-label { color: rgba(0,0,0,0.5); }
-body.light .onb-theme-name { color: rgba(0,0,0,0.4); }
-body.light .onb-step.active .onb-step-icon { background: #6c8cff; }
-body.light .onb-step.done .onb-step-icon { background: #32d74b; }
+body.light #window { background: #f9f9fb; }
+body.light #search-row { border-bottom-color: rgba(0,0,0,0.05); }
+body.light #search-row.ai-mode { border-bottom-color: rgba(0,0,0,0.1); }
+body.light #search-row.ai-mode #search-input::placeholder { color: rgba(0,0,0,0.35); }
+body.light #ai-badge { color: #000; background: rgba(0,0,0,0.06); }
+body.light #search-input { color: #18181b; }
+body.light #search-input::placeholder { color: #a1a1aa; }
+body.light #greeting-text { color: #09090b; }
+body.light #greeting-sub { color: #71717a; }
+body.light #summary-text { color: #27272a; }
+body.light #events-empty { color: rgba(0,0,0,0.35); }
+body.light .event-item:hover { background: rgba(0,0,0,0.02); }
+body.light .event-title { color: #18181b; }
+body.light .event-detail { color: #71717a; }
+body.light .event-time { color: #a1a1aa; }
+body.light .msg-text { color: #27272a; }
+body.light .msg-label { color: #a1a1aa; }
+body.light .chat-msg.user .msg-text { color: #52525b; }
+body.light .onb-summary-row span:first-child { color: #71717a; }
+body.light .onb-summary-row span:last-child { color: #18181b; }
+body.light .stat-chip { border-color: rgba(0,0,0,0.06); color: #71717a; background: rgba(0,0,0,0.02); }
+body.light .stat-chip b { color: #18181b; }
+body.light .conv-entry:hover { background: rgba(0,0,0,0.02); }
+body.light .conv-entry-icon { background: rgba(0,0,0,0.03); color: #71717a; }
+body.light .conv-entry-title { color: #18181b; }
+body.light .conv-entry-meta { color: #a1a1aa; }
+body.light #convs-header { color: #a1a1aa; }
+body.light .inline-code { background: rgba(0,0,0,0.04); color: #27272a; }
+body.light #footer { color: #71717a; border-top-color: rgba(0,0,0,0.05); }
+body.light kbd { background: rgba(0,0,0,0.03); border-color: rgba(0,0,0,0.08); color: #52525b; }
+body.light #events::-webkit-scrollbar-thumb, 
+body.light #chat::-webkit-scrollbar-thumb,
+body.light #summary::-webkit-scrollbar-thumb { 
+  background: rgba(0,0,0,0.08); 
+}
+body.light .event-icon.filesystem,
+body.light .event-icon.browser,
+body.light .event-icon.editor,
+body.light .event-icon.terminal,
+body.light .event-icon.system,
+body.light .event-icon.media {
+  background: rgba(0,0,0,0.03);
+  color: rgba(0,0,0,0.55);
+}
+body.light .event-link {
+  color: #0284c7;
+}
+body.light .event-link:hover {
+  color: #0369a1;
+}
+body.light .msg-more {
+  color: rgba(0,0,0,0.65);
+}
+body.light .msg-more:hover {
+  color: #000;
+  text-decoration: underline;
+}
+body.light .shimmer {
+  color: rgba(0,0,0,0.45);
+  background: linear-gradient(90deg, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0.7) 50%, rgba(0,0,0,0.45) 100%);
+  background-size: 200% 100%;
+}
+body.light .cmd-name {
+  color: #0284c7;
+}
+body.light .chat-conv-header {
+  color: #18181b;
+}
+body.light .chat-conv-entry {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+body.light .chat-conv-entry:hover {
+  background: rgba(0, 0, 0, 0.02);
+}
+body.light .chat-conv-title {
+  color: #0284c7;
+}
+body.light .chat-conv-meta {
+  color: #71717a;
+}
+body.light .chat-conv-preview {
+  color: #a1a1aa;
+}
+body.light #onboarding { background: #ffffff; border-color: rgba(0,0,0,0.08); border-radius: 12px; }
+body.light .onb-logo { color: #000; }
+body.light .onb-logo.check-circle { border-color: rgba(0,0,0,0.3); color: #000; border-radius: 50%; }
+body.light .onb-title { color: #000; }
+body.light .onb-desc { color: rgba(0,0,0,0.45); }
+body.light .onb-input { background: rgba(0,0,0,0.02); border-color: rgba(0,0,0,0.08); color: #000; border-radius: 8px; }
+body.light .onb-input:focus { border-color: rgba(0,0,0,0.35); }
+body.light .onb-input::placeholder { color: rgba(0,0,0,0.25); }
+body.light .onb-btn { background: rgba(0,0,0,0.03); color: rgba(0,0,0,0.5); border: 1px solid rgba(0,0,0,0.08); border-radius: 6px; }
+body.light .onb-btn:hover { background: rgba(0,0,0,0.06); color: #000; }
+body.light .onb-btn-primary { background: #000; color: #fff; border: none; }
+body.light .onb-btn-primary:hover { background: #27272a; color: #fff; }
+body.light .onb-theme-card { border-color: rgba(0,0,0,0.08); border-radius: 8px; }
+body.light .onb-theme-card.selected { border-color: #000; background: rgba(0,0,0,0.02); }
+body.light .onb-theme-card:hover { border-color: rgba(0,0,0,0.2); }
+body.light .onb-theme-preview { border-radius: 6px; }
+body.light .tp-line { border-radius: 3px; }
+body.light .onb-toggle input:checked + .onb-toggle-slider { background: #000; }
+body.light .onb-toggle-slider { border-radius: 22px; }
+body.light .onb-toggle-slider::before { background: #fff; border-radius: 50%; }
+body.light .onb-toggle input:checked + .onb-toggle-slider::before { background: #fff; }
+body.light .onb-toggle-label { color: rgba(0,0,0,0.6); }
+body.light .onb-sources { border-color: rgba(0, 0, 0, 0.08); border-radius: 8px; }
+body.light .onb-source { background: rgba(0, 0, 0, 0.005); border-bottom-color: rgba(0, 0, 0, 0.04); }
+body.light .onb-source:hover { background: rgba(0, 0, 0, 0.02); }
+body.light .onb-source-name { color: rgba(0, 0, 0, 0.8); }
+body.light .onb-source-checkbox { border-color: rgba(0, 0, 0, 0.25); border-radius: 4px; }
+body.light .onb-source.checked .onb-source-checkbox { background: #000; border-color: #000; }
+body.light .onb-source-checkbox::after { color: #fff; }
+body.light .onb-step-icon { border-color: rgba(0,0,0,0.12); color: rgba(0,0,0,0.3); border-radius: 50%; }
+body.light .onb-step.active .onb-step-icon { background: #000; border-color: #000; color: #fff; }
+body.light .onb-step.done .onb-step-icon { border-color: rgba(0,0,0,0.4); color: rgba(0,0,0,0.7); }
+body.light .onb-step-line { background: rgba(0,0,0,0.08); }
+body.light .onb-step.done + .onb-step .onb-step-line { background: rgba(0,0,0,0.3); }
+body.light .onb-summary-row { border-bottom-color: rgba(0,0,0,0.04); }
+body.light .onb-summary-row span:first-child { color: rgba(0,0,0,0.4); }
+body.light .onb-summary-row span:last-child { color: #000; }
+body.light .onb-theme-name { color: rgba(0,0,0,0.6); }
 </style>
 </head>
 <body>
 <div id="window">
   <div id="search-row">
-    <img id="search-logo" src="" alt="">
+    <img id="search-logo" src="assets/logo-darkmode.png" alt="">
     <input id="search-input" type="text" placeholder="Ask what you've been doing..." spellcheck="false" autofocus>
     <span id="ai-badge">AI</span>
-    <button id="send-btn">↵</button>
+
   </div>
   <div id="body">
     <div id="greeting">
@@ -642,11 +831,11 @@ body.light .onb-step.done .onb-step-icon { background: #32d74b; }
 
     <!-- Step 1: Name -->
     <div class="onb-panel visible" data-panel="1">
-      <div class="onb-logo">trace</div>
+      <img class="onb-logo-img" src="assets/logo-darkmode.png" alt="trace logo">
       <div class="onb-title">Hey! What should I call you?</div>
       <div class="onb-desc">Your name will appear in the greeting when you open trace.</div>
       <input id="onb-name" class="onb-input" type="text" placeholder="Enter your name..." maxlength="40" autofocus>
-      <button class="onb-btn" id="onb-next-1">Let's go →</button>
+      <button class="onb-btn onb-btn-primary" id="onb-next-1">Let's go →</button>
     </div>
 
     <!-- Step 2: Theme -->
@@ -669,7 +858,7 @@ body.light .onb-step.done .onb-step-icon { background: #32d74b; }
           <input type="radio" name="theme" value="light" hidden>
         </label>
       </div>
-      <button class="onb-btn" id="onb-next-2">Continue →</button>
+      <button class="onb-btn onb-btn-primary" id="onb-next-2">Continue →</button>
     </div>
 
     <!-- Step 3: Run at startup -->
@@ -683,7 +872,7 @@ body.light .onb-step.done .onb-step-icon { background: #32d74b; }
           <span class="onb-toggle-slider"></span>
         </label>
       </div>
-      <button class="onb-btn" id="onb-next-3">Continue →</button>
+      <button class="onb-btn onb-btn-primary" id="onb-next-3">Continue →</button>
     </div>
 
     <!-- Step 4: Tracking sources -->
@@ -691,45 +880,41 @@ body.light .onb-step.done .onb-step-icon { background: #32d74b; }
       <div class="onb-title">What should I track?</div>
       <div class="onb-desc">Choose the activities you want trace to remember. You can change these later.</div>
       <div class="onb-sources">
-        <label class="onb-source checked" data-source="browser">
-          <span class="onb-source-icon">🌐</span>
-          <span class="onb-source-info">
+        <div class="onb-source checked" data-source="browser">
+          <div class="onb-source-left">
             <span class="onb-source-name">Browser</span>
-            <span class="onb-source-desc">Pages you visit, searches, URLs</span>
-          </span>
+          </div>
+          <div class="onb-source-checkbox"></div>
           <input type="checkbox" value="browser" checked hidden>
-        </label>
-        <label class="onb-source checked" data-source="filesystem">
-          <span class="onb-source-icon">📁</span>
-          <span class="onb-source-info">
+        </div>
+        <div class="onb-source checked" data-source="filesystem">
+          <div class="onb-source-left">
             <span class="onb-source-name">Files</span>
-            <span class="onb-source-desc">Files you open and edit</span>
-          </span>
+          </div>
+          <div class="onb-source-checkbox"></div>
           <input type="checkbox" value="filesystem" checked hidden>
-        </label>
-        <label class="onb-source checked" data-source="editor">
-          <span class="onb-source-icon">✏️</span>
-          <span class="onb-source-info">
+        </div>
+        <div class="onb-source checked" data-source="editor">
+          <div class="onb-source-left">
             <span class="onb-source-name">Editor</span>
-            <span class="onb-source-desc">Git commits, code changes</span>
-          </span>
+          </div>
+          <div class="onb-source-checkbox"></div>
           <input type="checkbox" value="editor" checked hidden>
-        </label>
-        <label class="onb-source checked" data-source="terminal">
-          <span class="onb-source-icon">💻</span>
-          <span class="onb-source-info">
+        </div>
+        <div class="onb-source checked" data-source="terminal">
+          <div class="onb-source-left">
             <span class="onb-source-name">Terminal</span>
-            <span class="onb-source-desc">Commands you run, errors</span>
-          </span>
+          </div>
+          <div class="onb-source-checkbox"></div>
           <input type="checkbox" value="terminal" checked hidden>
-        </label>
+        </div>
       </div>
-      <button class="onb-btn" id="onb-next-4">Continue →</button>
+      <button class="onb-btn onb-btn-primary" id="onb-next-4">Continue →</button>
     </div>
 
     <!-- Step 5: Done -->
     <div class="onb-panel" data-panel="5">
-      <div class="onb-logo">✓</div>
+      <div class="onb-logo check-circle">✓</div>
       <div class="onb-title">You're all set!</div>
       <div class="onb-desc">trace will now remember your activity and help you find it later. Press <kbd>Alt+X</kbd> anytime to open trace.</div>
       <div class="onb-summary">

@@ -7,10 +7,11 @@ let chatMode = false
 let aiMode = false
 let activeConv = null
 let iconDataUrl = null
+const loadingConversations = new Set()
 
 const input = document.getElementById('search-input')
 const searchLogo = document.getElementById('search-logo')
-const sendBtn = document.getElementById('send-btn')
+
 const greetingText = document.getElementById('greeting-text')
 const greetingSub = document.getElementById('greeting-sub')
 const summary = document.getElementById('summary')
@@ -25,7 +26,6 @@ const searchRow = document.getElementById('search-row')
 window.trace.getIcon().then(url => {
   if (url) {
     iconDataUrl = url
-    searchLogo.src = url
   }
 })
 
@@ -57,7 +57,7 @@ function renderEvents() {
 
   events.innerHTML = activeEvents.slice(0, 12).map((e, i) => {
     const icon = ICONS[e.source] ?? '📄'
-    const title = e.content || ''
+    const title = cleanTitle(e.content || '')
     const detail = e.metadata?.path || e.metadata?.url || e.metadata?.project || e.metadata?.app || ''
     const ts = e.timestamp || e.metadata?.rawTimestamp
     return `<div class="event-item" data-index="${i}" style="animation-delay:${(i % 12) * 0.03}s">
@@ -178,6 +178,9 @@ async function openConversation(id) {
   for (const msg of conv.messages) {
     renderChatMessage(msg)
   }
+  if (loadingConversations.has(id)) {
+    showTyping()
+  }
   enterChat()
   scrollToBottom()
 }
@@ -203,13 +206,17 @@ async function startNewConversation() {
   enterChat()
 }
 
-async function saveCurrentConversation() {
-  if (!activeConv || !activeConv.messages.length) return
-  if (!activeConv.title) {
-    const first = activeConv.messages.find(m => m.role === 'user')
-    if (first) activeConv.title = first.text.slice(0, 80)
+async function saveConversation(conv) {
+  if (!conv || !conv.messages.length) return
+  if (!conv.title) {
+    const first = conv.messages.find(m => m.role === 'user')
+    if (first) conv.title = first.text.slice(0, 80)
   }
-  await window.trace.conversationSave(activeConv)
+  await window.trace.conversationSave(conv)
+}
+
+async function saveCurrentConversation() {
+  await saveConversation(activeConv)
 }
 
 async function loadInitialState() {
@@ -258,7 +265,7 @@ async function pollSummary() {
     summary.classList.add('visible')
     document.getElementById('summary-loading').classList.add('visible')
   }
-  const data = await withTimeout(window.trace.api('GET', '/context/summary'), 10000)
+  const data = await withTimeout(window.trace.api('GET', '/context/summary'), 30000)
   if (!chatMode) document.getElementById('summary-loading').classList.remove('visible')
   if (!data) return
   lastSummary = data
@@ -282,44 +289,36 @@ setInterval(pollSummary, 300000)
 
 // ---- chat ----
 
-input.addEventListener('input', () => {
-  sendBtn.classList.toggle('active', input.value.trim().length > 0)
-})
-
-input.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') {
-    if (chatMode) {
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      if (chatMode) {
+        if (input.value) {
+          input.value = ''
+        } else {
+          exitChat()
+        }
+        return
+      }
       if (input.value) {
         input.value = ''
-        sendBtn.classList.remove('active')
-      } else {
-        exitChat()
+        return
       }
+      closeWindow()
       return
     }
-    if (input.value) {
-      input.value = ''
-      sendBtn.classList.remove('active')
+    if (e.key === 'Tab') {
+      e.preventDefault()
+      aiMode = !aiMode
+      searchRow.classList.toggle('ai-mode', aiMode)
+      input.placeholder = aiMode ? 'Ask anything...' : "Ask what you've been doing..."
+      input.focus()
       return
     }
-    closeWindow()
-    return
-  }
-  if (e.key === 'Tab') {
-    e.preventDefault()
-    aiMode = !aiMode
-    searchRow.classList.toggle('ai-mode', aiMode)
-    input.placeholder = aiMode ? 'Ask anything...' : "Ask what you've been doing..."
-    input.focus()
-    return
-  }
-  if (e.key === 'Enter' && !e.shiftKey) {
-    e.preventDefault()
-    sendMessage()
-  }
-})
-
-sendBtn.addEventListener('click', () => sendMessage())
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      sendMessage()
+    }
+  })
 
 const COMMANDS = {
   help: { desc: 'Show available commands' },
@@ -339,12 +338,12 @@ async function handleCommand(cmd) {
   const args = parts.slice(1)
 
   if (name === 'help' || !name) {
-    const lines = Object.entries(COMMANDS).map(([k, v]) => `<span style="display:inline-block;padding:0 5px;font-weight:500;color:rgba(100,210,255,0.7)">/${k}</span> — ${v.desc}`)
-    return `<div style="font-size:13.5px;line-height:2.2">${lines.join('<br>')}</div>`
+    const lines = Object.entries(COMMANDS).map(([k, v]) => `<span class="cmd-name">/${k}</span> — ${v.desc}`)
+    return `<div class="cmd-help-list">${lines.join('<br>')}</div>`
   }
 
   if (!COMMANDS[name]) {
-    return `Unknown command: <span style="font-weight:500;color:rgba(100,210,255,0.7)">/${name}</span>. Type <span style="font-weight:500;color:rgba(100,210,255,0.7)">/help</span> for available commands.`
+    return `Unknown command: <span class="cmd-name">/${name}</span>. Type <span class="cmd-name">/help</span> for available commands.`
   }
 
   switch (name) {
@@ -360,21 +359,36 @@ async function handleCommand(cmd) {
       if (!list || !list.length) {
         return 'No past conversations found.'
       }
-      const items = list.map(c => {
+      
+      const renderItem = c => {
         const title = c.title || 'New conversation'
         const date = formatTimestamp(c.createdAt)
         const preview = c.preview ? escape(c.preview).slice(0, 60) : ''
-        return `<div class="conv-entry" style="padding: 10px; border-bottom: 1px solid rgba(255,255,255,0.04); margin-bottom: 8px; border-radius: 8px; cursor: pointer; display: flex; flex-direction: column; gap: 2px;" onclick="openConversation('${c.id}')">
-          <div style="font-weight: 600; color: rgba(100, 210, 255, 0.9);">💬 ${escape(title)}</div>
-          <div style="font-size: 11px; color: rgba(255,255,255,0.3);">
-            ${date} · ${c.messageCount} message${c.messageCount !== 1 ? 's' : ''}${preview ? ' · <span style="color: rgba(255,255,255,0.25)">' + preview + '</span>' : ''}
+        return `<div class="chat-conv-entry" onclick="openConversation('${c.id}')">
+          <div class="chat-conv-title">💬 ${escape(title)}</div>
+          <div class="chat-conv-meta">
+            ${date} · ${c.messageCount} message${c.messageCount !== 1 ? 's' : ''}${preview ? ' · <span class="chat-conv-preview">' + preview + '</span>' : ''}
           </div>
         </div>`
-      }).join('')
-      return `<div style="display: flex; flex-direction: column; gap: 6px; padding: 4px 0;">
-        <div style="font-weight: 600; margin-bottom: 8px; color: #fff;">Past Conversations:</div>
-        ${items}
-      </div>`
+      }
+
+      const top10 = list.slice(0, 10).map(renderItem).join('')
+      const remaining = list.slice(10)
+      
+      let html = `<div class="chat-conv-list">
+        <div class="chat-conv-header">Past Conversations:</div>
+        ${top10}`
+        
+      if (remaining.length > 0) {
+        const remHtml = remaining.map(renderItem).join('')
+        const moreId = 'more-convs-' + Date.now()
+        html += `
+        <div id="${moreId}" style="display: none; flex-direction: column; gap: 6px;">${remHtml}</div>
+        <button class="onb-btn" style="margin-top: 8px; width: 100%; padding: 6px;" onclick="document.getElementById('${moreId}').style.display = 'flex'; this.remove();">Load more</button>`
+      }
+      
+      html += `</div>`
+      return html
     }
     case 'restart':
     case 'restart-server':
@@ -387,7 +401,7 @@ async function handleCommand(cmd) {
     case 'status': {
       const s = await window.trace.api('GET', '/admin/status')
       if (!s) return 'Server unreachable.'
-      return `Status: <b>${s.status}</b><br>Daemon: <b>${s.daemon ? 'running' : 'stopped'}</b><br>Supermemory: <b>${s.supermemory ? 'connected' : 'disconnected'}</b><br>Container: <code>${s.containerTag}</code>`
+      return `Status: <b>${s.status}</b><br>Daemon: <b>${s.daemon ? 'running' : 'stopped'}</b><br>Supermemory: <b>${s.supermemory ? 'connected' : 'disconnected'}</b><br>Container: <code class="inline-code">${s.containerTag}</code>`
     }
     case 'onboarding': {
       onbData = { name: '', theme: 'dark', runAtStartup: true, sources: ['browser', 'filesystem', 'editor', 'terminal'] }
@@ -395,7 +409,7 @@ async function handleCommand(cmd) {
       return 'Opened onboarding wizard.'
     }
     default:
-      return `Unknown command: /${name}`
+      return `Unknown command: <span class="cmd-name">/${name}</span>`
   }
 }
 
@@ -403,7 +417,6 @@ async function sendMessage() {
   const q = input.value.trim()
   if (!q) return
   input.value = ''
-  sendBtn.classList.remove('active')
 
   if (q.trim() === '/new') {
     if (!chatMode) startNewConversation()
@@ -415,37 +428,60 @@ async function sendMessage() {
   if (!chatMode) enterChat()
 
   if (q.startsWith('/')) {
+    const targetConv = activeConv
+    if (targetConv) loadingConversations.add(targetConv.id)
     showTyping()
     scrollToBottom()
     const reply = await handleCommand(q)
     hideTyping()
-    const msg = { role: 'ai', text: reply, raw: true, timestamp: new Date().toISOString() }
-    renderChatMessage(msg)
+    if (targetConv) {
+      loadingConversations.delete(targetConv.id)
+      addAiMsgToConv(targetConv, reply, [], true)
+    } else {
+      const msg = { role: 'ai', text: reply, raw: true, timestamp: new Date().toISOString() }
+      renderChatMessage(msg)
+    }
     scrollToBottom()
     return
   }
 
   addUserMsg(q)
+  const targetConv = activeConv
+  if (targetConv) loadingConversations.add(targetConv.id)
   showTyping()
   scrollToBottom()
 
   try {
     const tz = -new Date().getTimezoneOffset()
     const endpoint = aiMode ? '/context/chat' : '/context/query'
-    const data = await window.trace.api('GET', `${endpoint}?q=${encodeURIComponent(q)}${aiMode ? '' : '&llm=true'}&tz=${tz}`)
+    const history = targetConv && targetConv.messages.length > 1
+      ? targetConv.messages.slice(0, -1).map(m => ({ role: m.role, text: m.text }))
+      : []
+
+    const data = await window.trace.api('POST', endpoint, {
+      q,
+      history,
+      llm: !aiMode,
+      tz
+    })
     if (data?.answer) {
-      addAiMsg(data.answer, data.memories ?? [])
+      addAiMsgToConv(targetConv, data.answer, data.memories ?? [])
     } else if (data?.memories?.length) {
       const fallback = formatFallbackAnswer(q, data.memories)
-      addAiMsg(fallback, data.memories)
+      addAiMsgToConv(targetConv, fallback, data.memories)
     } else {
-      addAiMsg('No relevant activity found for that question.', [])
+      addAiMsgToConv(targetConv, 'No relevant activity found for that question.', [])
     }
   } catch (err) {
-    addAiMsg('Sorry, something went wrong.', [])
+    addAiMsgToConv(targetConv, 'Sorry, something went wrong.', [])
   } finally {
-    hideTyping()
-    scrollToBottom()
+    if (targetConv) {
+      loadingConversations.delete(targetConv.id)
+    }
+    if (chatMode && activeConv && activeConv.id === targetConv?.id) {
+      hideTyping()
+      scrollToBottom()
+    }
   }
 }
 
@@ -478,7 +514,7 @@ function renderChatMessage(msg) {
     html += memories.slice(0, 6).map(m => {
       const s = m.source ?? m.metadata?.source ?? 'filesystem'
       const icon = ICONS[s] ?? '📄'
-      const title = m.title ?? m.content ?? m.memory ?? m.chunk ?? ''
+      const title = cleanTitle(m.title ?? m.content ?? m.memory ?? m.chunk ?? '')
       const detail = m.metadata?.path ?? m.metadata?.url ?? m.metadata?.project ?? ''
       const isUrl = String(detail).startsWith('http')
       const detailHtml = isUrl
@@ -519,6 +555,7 @@ function enterChat() {
 
 function exitChat() {
   chatMode = false
+  activeConv = null
   chat.style.display = 'none'
   events.style.display = ''
   summary.classList.remove('hidden')
@@ -528,11 +565,14 @@ function exitChat() {
 }
 
 function addUserMsg(text) {
-  if (!activeConv) activeConv = {
-    id: 'conv_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
-    title: '',
-    createdAt: new Date().toISOString(),
-    messages: [],
+  if (!activeConv) {
+    activeConv = {
+      id: 'conv_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+      title: '',
+      createdAt: new Date().toISOString(),
+      messages: [],
+    }
+    chat.innerHTML = ''
   }
   const msg = { role: 'user', text, timestamp: new Date().toISOString() }
   activeConv.messages.push(msg)
@@ -540,8 +580,8 @@ function addUserMsg(text) {
   saveCurrentConversation()
 }
 
-function addAiMsg(text, memories, raw) {
-  if (!activeConv) return
+function addAiMsgToConv(conv, text, memories, raw) {
+  if (!conv) return
   let short = text
   let full = ''
   if (!raw) {
@@ -559,18 +599,20 @@ function addAiMsg(text, memories, raw) {
     }
   }
   const msg = { role: 'ai', text, short, full, memories: memories || [], raw: !!raw, timestamp: new Date().toISOString() }
-  activeConv.messages.push(msg)
-  renderChatMessage(msg)
-  saveCurrentConversation()
+  conv.messages.push(msg)
+  if (activeConv && activeConv.id === conv.id) {
+    renderChatMessage(msg)
+  }
+  saveConversation(conv)
 }
 
 function showTyping() {
   const el = document.createElement('div')
   el.className = 'typing-indicator'
   el.id = 'typing-indicator'
-  const logo = iconDataUrl
-    ? `<img class="typing-logo" src="${iconDataUrl}">`
-    : ''
+  const isLight = document.body.classList.contains('light')
+  const logoPath = isLight ? 'assets/logo-lightmode.png' : 'assets/logo-darkmode.png'
+  const logo = `<img class="typing-logo" src="${logoPath}">`
   el.innerHTML = `<div class="typing-line">${logo}<span class="shimmer">thinking</span></div>`
   chat.appendChild(el)
 }
@@ -655,7 +697,7 @@ function initOnboarding() {
     el.addEventListener('click', () => {
       el.classList.toggle('checked')
       const cb = el.querySelector('input[type="checkbox"]')
-      cb.checked = !cb.checked
+      if (cb) cb.checked = el.classList.contains('checked')
     })
   })
   getOnbEl('onb-next-4').addEventListener('click', () => {
@@ -687,7 +729,12 @@ function populateOnbSummary() {
 }
 
 function applyTheme(theme) {
-  document.body.classList.toggle('light', theme === 'light')
+  const isLight = theme === 'light'
+  document.body.classList.toggle('light', isLight)
+  const logoPath = isLight ? 'assets/logo-lightmode.png' : 'assets/logo-darkmode.png'
+  if (searchLogo) searchLogo.src = logoPath
+  const onbLogoImg = document.querySelector('.onb-logo-img')
+  if (onbLogoImg) onbLogoImg.src = logoPath
 }
 
 // Override goOnbStep to refresh summary on step 5

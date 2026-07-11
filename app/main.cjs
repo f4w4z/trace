@@ -11,6 +11,27 @@ let win = null
 let tray = null
 let serverProcess = null
 
+let settingsPath = null
+function getSettingsPath() {
+  if (!settingsPath) settingsPath = path.join(app.getPath('userData'), 'settings.json')
+  return settingsPath
+}
+
+function loadSettings() {
+  try {
+    const p = getSettingsPath()
+    if (!fs.existsSync(p)) return null
+    return JSON.parse(fs.readFileSync(p, 'utf-8'))
+  } catch { return null }
+}
+
+function saveSettings(s) {
+  try {
+    fs.writeFileSync(getSettingsPath(), JSON.stringify(s, null, 2), 'utf-8')
+    return true
+  } catch { return false }
+}
+
 const gotTheLock = app.requestSingleInstanceLock()
 if (!gotTheLock) {
   app.quit()
@@ -57,6 +78,10 @@ function createWindow(showOnStart) {
   const winWidth = Math.min(700, width - 100)
   const winHeight = Math.min(500, height - 200)
 
+  const settings = loadSettings()
+  const logoName = (settings && settings.theme === 'light') ? 'logo-lightmode.png' : 'logo-darkmode.png'
+  const iconPath = path.join(__dirname, 'assets', logoName)
+
   win = new BrowserWindow({
     width: winWidth,
     height: winHeight,
@@ -71,6 +96,7 @@ function createWindow(showOnStart) {
     show: false,
     hasShadow: false,
     thickFrame: false,
+    icon: nativeImage.createFromPath(iconPath),
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
       contextIsolation: true,
@@ -115,47 +141,40 @@ function toggleWindow() {
   }
 }
 
-function createTray() {
-  const iconPath = path.join(__dirname, 'assets', 'logo.png')
+function createTray(theme) {
+  const isLight = theme === 'light'
+  const logoName = isLight ? 'logo-lightmode.png' : 'logo-darkmode.png'
+  const iconPath = path.join(__dirname, 'assets', logoName)
   let icon
   try { icon = nativeImage.createFromPath(iconPath).resize({ width: 16, height: 16 }) } catch {}
   if (!icon || icon.isEmpty()) icon = nativeImage.createEmpty()
-  tray = new Tray(icon)
-  tray.setToolTip('trace — Context Search')
-  tray.setContextMenu(Menu.buildFromTemplate([
-    { label: 'Show (Alt+X)', click: toggleWindow },
-    { type: 'separator' },
-    {
-      label: 'Quit',
-      click: () => {
-        app.isQuitting = true
-        app.quit()
+  
+  if (tray) {
+    tray.setImage(icon)
+  } else {
+    tray = new Tray(icon)
+    tray.setToolTip('trace — Context Search')
+    tray.setContextMenu(Menu.buildFromTemplate([
+      { label: 'Show (Alt+X)', click: toggleWindow },
+      { type: 'separator' },
+      {
+        label: 'Quit',
+        click: () => {
+          app.isQuitting = true
+          app.quit()
+        },
       },
-    },
-  ]))
-  tray.on('click', toggleWindow)
+    ]))
+    tray.on('click', toggleWindow)
+  }
 }
 
 app.whenReady().then(async () => {
   // Load settings + create window first so user sees something immediately
-  const SETTINGS_PATH = path.join(app.getPath('userData'), 'settings.json')
-
-  function loadSettings() {
-    try {
-      if (!fs.existsSync(SETTINGS_PATH)) return null
-      return JSON.parse(fs.readFileSync(SETTINGS_PATH, 'utf-8'))
-    } catch { return null }
-  }
-
-  function saveSettings(s) {
-    try { fs.writeFileSync(SETTINGS_PATH, JSON.stringify(s, null, 2), 'utf-8'); return true }
-    catch { return false }
-  }
-
   const settings = loadSettings()
   const needsOnboarding = !settings || !settings.onboarded || !settings.name
   createWindow(needsOnboarding)
-  createTray()
+  createTray(settings ? settings.theme : 'dark')
 
   // Register ALL IPC handlers before ensureServer so renderer can use them immediately
   const registered = globalShortcut.register('Alt+X', toggleWindow)
@@ -172,7 +191,18 @@ app.whenReady().then(async () => {
 
   ipcMain.handle('get-settings', async () => loadSettings())
 
-  ipcMain.handle('save-settings', async (_, settings) => saveSettings(settings))
+  ipcMain.handle('save-settings', async (_, settings) => {
+    const success = saveSettings(settings)
+    if (success && settings && settings.theme) {
+      createTray(settings.theme)
+      if (win) {
+        const logoName = settings.theme === 'light' ? 'logo-lightmode.png' : 'logo-darkmode.png'
+        const iconPath = path.join(__dirname, 'assets', logoName)
+        try { win.setIcon(nativeImage.createFromPath(iconPath)) } catch {}
+      }
+    }
+    return success
+  })
 
   ipcMain.handle('set-run-at-startup', async (_, enable) => {
     try {
@@ -190,7 +220,10 @@ app.whenReady().then(async () => {
   })
 
   ipcMain.handle('get-icon', () => {
-    const iconPath = path.join(__dirname, 'assets', 'logo.png')
+    const settings = loadSettings()
+    const theme = settings ? settings.theme : 'dark'
+    const logoName = theme === 'light' ? 'logo-lightmode.png' : 'logo-darkmode.png'
+    const iconPath = path.join(__dirname, 'assets', logoName)
     try {
       const data = fs.readFileSync(iconPath)
       return `data:image/png;base64,${data.toString('base64')}`

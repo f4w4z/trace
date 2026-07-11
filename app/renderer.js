@@ -288,12 +288,12 @@ async function handleCommand(cmd) {
   const args = parts.slice(1)
 
   if (name === 'help' || !name) {
-    const lines = Object.entries(COMMANDS).map(([k, v]) => `<code>/${k}</code> - ${v.desc}`)
-    return `<div style="font-size:13px;line-height:1.8">Available commands:<br>${lines.join('<br>')}</div>`
+    const lines = Object.entries(COMMANDS).map(([k, v]) => `<span style="display:inline-block;padding:0 5px;font-weight:500;color:rgba(100,210,255,0.7)">/${k}</span> — ${v.desc}`)
+    return `<div style="font-size:13.5px;line-height:2.2">${lines.join('<br>')}</div>`
   }
 
   if (!COMMANDS[name]) {
-    return `Unknown command: <code>/${name}</code>. Type <code>/help</code> for available commands.`
+    return `Unknown command: <span style="font-weight:500;color:rgba(100,210,255,0.7)">/${name}</span>. Type <span style="font-weight:500;color:rgba(100,210,255,0.7)">/help</span> for available commands.`
   }
 
   switch (name) {
@@ -356,33 +356,29 @@ async function sendMessage() {
 function renderChatMessage(msg) {
   const el = document.createElement('div')
   el.className = `chat-msg ${msg.role}`
-  if (msg.role === 'user') {
-    el.innerHTML = `<div class="chat-bubble">${escape(msg.text)}<div class="chat-time">${formatTimestamp(msg.timestamp)}</div></div>`
-  } else {
-    const text = msg.raw
-      ? msg.text
-      : escape(msg.text).replace(/\n/g, '<br>')
-    let html = `<div class="chat-bubble">${text}<div class="chat-time">${formatTimestamp(msg.timestamp)}</div></div>`
-    const memories = msg.memories || []
-    if (memories.length) {
-      html += '<div class="chat-events">'
-      html += memories.slice(0, 6).map(m => {
-        const s = m.metadata?.source ?? 'filesystem'
-        const icon = ICONS[s] ?? '📄'
-        const title = m.title ?? m.content ?? m.memory ?? m.chunk ?? ''
-        const detail = m.metadata?.path ?? m.metadata?.url ?? m.metadata?.project ?? ''
-        return `<div class="event-item">
-          <div class="event-icon ${s}">${icon}</div>
-          <div class="event-body">
-            <div class="event-title">${escape(title)}</div>
-            ${detail ? `<div class="event-detail">${escape(detail)}</div>` : ''}
-          </div>
-        </div>`
-      }).join('')
-      html += '</div>'
-    }
-    el.innerHTML = html
+  const label = msg.role === 'user' ? 'you' : 'trace'
+  const ts = formatTimestamp(msg.timestamp)
+  let text = msg.raw ? msg.text : escape(msg.text).replace(/\n/g, '<br>')
+  let html = `<div class="msg-label">${label} · ${ts}</div><div class="msg-text">${text}</div>`
+  const memories = msg.memories || []
+  if (memories.length && msg.role === 'ai') {
+    html += '<div class="msg-memories">'
+    html += memories.slice(0, 6).map(m => {
+      const s = m.metadata?.source ?? 'filesystem'
+      const icon = ICONS[s] ?? '📄'
+      const title = m.title ?? m.content ?? m.memory ?? m.chunk ?? ''
+      const detail = m.metadata?.path ?? m.metadata?.url ?? m.metadata?.project ?? ''
+      return `<div class="event-item">
+        <div class="event-icon ${s}">${icon}</div>
+        <div class="event-body">
+          <div class="event-title">${escape(title)}</div>
+          ${detail ? `<div class="event-detail">${escape(detail)}</div>` : ''}
+        </div>
+      </div>`
+    }).join('')
+    html += '</div>'
   }
+  el.innerHTML = html
   chat.appendChild(el)
 }
 

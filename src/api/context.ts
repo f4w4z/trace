@@ -36,6 +36,15 @@ export class ContextService {
     const recent = (await this.client.listDocuments(2000)).filter(d => !this.isSummary(d))
     const seen = new Set(results.map(r => r.id))
     let combined = [...results, ...recent.filter(r => !seen.has(r.id))]
+    // Broaden search with individual keywords so "listening" can match "Now playing: ..."
+    const words = query.toLowerCase().split(/\s+/).filter(w => w.length > 3 && !['what', 'were', 'when', 'where', 'that', 'this', 'there', 'with', 'have', 'been', 'your', 'about', 'tell', 'from'].includes(w))
+    for (const word of words) {
+      for (const r of await this.client.searchQuery(word, 10)) {
+        if (!seen.has(r.id) && !this.isSummary(r)) {
+          combined.push(r); seen.add(r.id)
+        }
+      }
+    }
     let answer: string | undefined
     if (llmUrl && llmModel) {
       answer = await this.askLLM(query, combined, llmUrl, llmModel, llmApiKey)

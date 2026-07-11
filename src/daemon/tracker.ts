@@ -63,6 +63,43 @@ $fgEvents = @()
 $lastIdleTick = [Environment]::TickCount
 $idleReported = $false
 $tick = 0
+
+# SMTC media helper (load once)
+$smtcLoaded = $false
+$smtcMgr = $null
+$smtcAwait = $null
+function Get-MediaInfo {
+  if (-not $script:smtcLoaded) {
+    try {
+      Add-Type -AssemblyName System.Runtime.WindowsRuntime -ErrorAction Stop
+      $asTaskGeneric = ([System.WindowsRuntimeSystemExtensions].GetMethods() | Where-Object { $_.Name -eq 'AsTask' -and $_.GetParameters().Count -eq 1 -and $_.GetParameters()[0].ParameterType.Name -eq 'IAsyncOperation\`1' })[0]
+      $script:smtcAwait = {
+        param($WinRtTask, $ResultType)
+        $asTask = $asTaskGeneric.MakeGenericMethod($ResultType)
+        $netTask = $asTask.Invoke($null, @($WinRtTask))
+        $netTask.Wait(-1) | Out-Null
+        $netTask.Result
+      }.GetNewClosure()
+      [Windows.Media.Control.GlobalSystemMediaTransportControlsSessionManager,Windows.System,ContentType=WindowsRuntime] | Out-Null
+      $script:smtcLoaded = $true
+    } catch { return $null }
+  }
+  try {
+    if (-not $script:smtcMgr) {
+      $script:smtcMgr = & $script:smtcAwait ([Windows.Media.Control.GlobalSystemMediaTransportControlsSessionManager]::RequestAsync()) ([Windows.Media.Control.GlobalSystemMediaTransportControlsSessionManager])
+    }
+    $sessions = $script:smtcMgr.GetSessions()
+    foreach ($s in $sessions) {
+      $props = & $script:smtcAwait $s.TryGetMediaPropertiesAsync() ([Windows.Media.Control.GlobalSystemMediaTransportControlsSessionMediaProperties])
+      if ($props -and $props.Title) {
+        $artist = if ($props.Artist) { $props.Artist } else { "" }
+        $title = if ($artist) { "$artist - $($props.Title)" } else { $props.Title }
+        return @{title=$title; app=$s.SourceAppUserModelId}
+      }
+    }
+  } catch { $script:smtcMgr = $null }
+  return $null
+}
 while ($true) {
   $tick++
   $now = [DateTime]::UtcNow
@@ -112,31 +149,11 @@ while ($true) {
     }
   }
 
-  # Background media check (Spotify, etc. — even when not foreground)
-  $mediaApps = @("spotify","wmplayer","vlc","foobar2000")
-  foreach ($m in $mediaApps) {
-    $title = ""
-    $mp = Get-Process -Name $m -ErrorAction SilentlyContinue | Select-Object -First 1
-    if ($mp) { $title = $mp.MainWindowTitle }
-    # If MainWindowTitle is empty (minimized to tray), fall back to EnumWindows
-    if ($mp -and -not $title) {
-      $pid = $mp.Id
-      $sb = New-Object System.Text.StringBuilder 512
-      [WinAPI]::EnumWindows({ param($hWnd, $lp)
-        $p = [uint32]0; [WinAPI]::GetWindowThreadProcessId($hWnd, [ref]$p) | Out-Null
-        if ($p -eq $pid) {
-          [WinAPI]::GetWindowText($hWnd, $sb, 512) | Out-Null
-          $t = $sb.ToString().Trim()
-          if ($t) { $script:mediaTitle = $t; return $false }
-        }
-        return $true
-      }, [IntPtr]::Zero)
-      $title = $script:mediaTitle
-    }
-    if ($title -and $title -ne $lastMediaTitle) {
-      $lastMediaTitle = $title; $lastMediaApp = $m
-      Write-Output ('{"t":"media","app":"' + $m + '","title":' + (ConvertTo-Json $title -Compress) + ',"ts":' + $epoch + '}')
-    }
+  # Background media check via Windows SMTC (uses cached helper defined above)
+  $mediaResult = Get-MediaInfo
+  if ($mediaResult -and $mediaResult.title -ne $lastMediaTitle) {
+    $lastMediaTitle = $mediaResult.title
+    Write-Output ('{"t":"media","app":"' + $mediaResult.app + '","title":' + (ConvertTo-Json $mediaResult.title -Compress) + ',"ts":' + $epoch + '}')
   }
 
   # Process snapshot every 10s

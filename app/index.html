@@ -100,7 +100,13 @@ html, body {
   padding: 6px 22px 14px;
   flex-shrink: 0;
   display: none;
+  max-height: 35vh;
+  overflow-y: auto;
 }
+#summary.visible { display: block; }
+#summary::-webkit-scrollbar { width: 3px; }
+#summary::-webkit-scrollbar-track { background: transparent; }
+#summary::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.06); border-radius: 2px; }
 #summary.visible { display: block; }
 #summary-text {
   font-size: 13.5px; line-height: 1.6;

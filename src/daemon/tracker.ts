@@ -5,7 +5,9 @@ import { createEvent, timeBucket } from '../utils/events.js'
 import { logger } from '../utils/logger.js'
 
 const PS_SCRIPT = `
-Add-Type @"
+$loaded = $false
+try {
+    Add-Type @"
 using System;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -15,10 +17,34 @@ public class WinAPI {
   [DllImport("user32.dll")] public static extern int GetWindowText(IntPtr hWnd, StringBuilder text, int count);
   [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint pid);
   [DllImport("user32.dll")] public static extern bool EnumWindows(EnumWindowsProc lpEnumFunc, IntPtr lParam);
-  [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
 }
 public delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
 "@
+    $loaded = $true
+} catch {
+    Write-Host "First Add-Type failed: $_"
+    Start-Sleep -Seconds 30
+    try {
+        Add-Type @"
+using System;
+using System.Runtime.InteropServices;
+using System.Text;
+using System.Diagnostics;
+public class WinAPI {
+  [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
+  [DllImport("user32.dll")] public static extern int GetWindowText(IntPtr hWnd, StringBuilder text, int count);
+  [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint pid);
+  [DllImport("user32.dll")] public static extern bool EnumWindows(EnumWindowsProc lpEnumFunc, IntPtr lParam);
+}
+public delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
+"@
+        $loaded = $true
+    } catch {
+        Write-Host "Second Add-Type failed, exiting: $_"
+        exit 1
+    }
+}
+if (-not $loaded) { exit 1 }
 $uiLoaded = $false
 function Get-BrowserUrl {
   param($hWnd)
@@ -215,6 +241,8 @@ export class SystemTracker {
   private restartTimer: ReturnType<typeof setTimeout> | null = null
   private previousProcs: Map<number, string> = new Map()
   private browserReported: Map<string, number> = new Map()
+  private restartCount = 0
+  private restartWindowStart = 0
 
   constructor(client: SupermemoryClient) {
     this.client = client
@@ -268,6 +296,17 @@ export class SystemTracker {
   }
 
   private scheduleRestart(): void {
+    // Max 5 restarts per minute to prevent crash loops
+    const now = Date.now()
+    if (now - this.restartWindowStart > 60000) {
+      this.restartCount = 0
+      this.restartWindowStart = now
+    }
+    this.restartCount++
+    if (this.restartCount > 5) {
+      logger.error('system tracker crashed too many times, giving up')
+      return
+    }
     if (this.restartTimer) return
     this.restartTimer = setTimeout(() => {
       this.restartTimer = null
@@ -333,8 +372,48 @@ export class SystemTracker {
     if (Date.now() - last < 30000) return
     this.browserReported.set(key, Date.now())
 
-    this.client.addDocument(createEvent('browser', 'url_visited', evt.title || evt.url, {
-      url: evt.url, title: evt.title, app: evt.app,
+    const meta: Record<string, string> = { url: evt.url, title: evt.title, app: evt.app }
+
+    // Parse search engine URLs to extract search queries
+    try {
+      const uri = new URL(evt.url)
+      if (uri.hostname.includes('google.')) {
+        const q = uri.searchParams.get('q')
+        if (q) {
+          meta.searchEngine = 'google'
+          meta.searchQuery = q
+          meta.resultType = 'search'
+        }
+      } else if (uri.hostname.includes('bing.')) {
+        const q = uri.searchParams.get('q')
+        if (q) {
+          meta.searchEngine = 'bing'
+          meta.searchQuery = q
+          meta.resultType = 'search'
+        }
+      } else if (uri.hostname.includes('duckduckgo.')) {
+        const q = uri.searchParams.get('q')
+        if (q) {
+          meta.searchEngine = 'duckduckgo'
+          meta.searchQuery = q
+          meta.resultType = 'search'
+        }
+      } else if (uri.hostname.includes('amazon.')) {
+        meta.resultType = 'product'
+        const q = uri.searchParams.get('k')
+        if (q) meta.searchQuery = q
+      } else if (uri.hostname.includes('youtube.')) {
+        const q = uri.searchParams.get('search_query')
+        if (q) {
+          meta.searchEngine = 'youtube'
+          meta.searchQuery = q
+          meta.resultType = 'search'
+        }
+      }
+    } catch {}
+
+    this.client.addDocument(createEvent('browser', 'url_visited', meta.searchQuery ? `${meta.searchEngine} search: ${meta.searchQuery}` : (evt.title || evt.url), {
+      ...meta,
       tags: ['browser', evt.app, timeBucket(new Date(evt.ts))],
     }))
   }

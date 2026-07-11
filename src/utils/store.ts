@@ -68,7 +68,8 @@ export class LocalStore {
   async list(limit = 100): Promise<SupermemoryMemory[]> {
     await this.ready
     try {
-      const all = this.readLines().reverse().slice(0, limit)
+      const all = this.readLines().reverse()
+      if (limit > 0) all.splice(limit)
       return all.map(l => {
         const e = JSON.parse(l)
         return {

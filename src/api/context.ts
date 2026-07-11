@@ -33,7 +33,7 @@ export class ContextService {
 
   async queryWithLLM(query: string, llmUrl?: string, llmModel?: string, llmApiKey?: string): Promise<QueryResult> {
     const results = (await this.client.searchQuery(query, 30)).filter(d => !this.isSummary(d))
-    const recent = (await this.client.listDocuments(2000)).filter(d => !this.isSummary(d))
+    const recent = (await this.client.listDocuments(0)).filter(d => !this.isSummary(d))
     const seen = new Set(results.map(r => r.id))
     let combined = [...results, ...recent.filter(r => !seen.has(r.id))]
     // Broaden search with individual keywords so "listening" can match "Now playing: ..."

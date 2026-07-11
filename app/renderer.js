@@ -290,6 +290,10 @@ input.addEventListener('keydown', (e) => {
     closeWindow()
     return
   }
+  if (e.key === 'Tab') {
+    e.preventDefault()
+    sendMessage()
+  }
   if (e.key === 'Enter' && !e.shiftKey) {
     e.preventDefault()
     sendMessage()

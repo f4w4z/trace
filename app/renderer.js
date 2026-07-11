@@ -358,10 +358,26 @@ function renderChatMessage(msg) {
   el.className = `chat-msg ${msg.role}`
   const label = msg.role === 'user' ? 'you' : 'trace'
   const ts = formatTimestamp(msg.timestamp)
+
+  if (msg.role === 'user') {
+    el.innerHTML = `<div class="msg-label">${label} · ${ts}</div><div class="msg-text">${escape(msg.text)}</div>`
+    chat.appendChild(el)
+    return
+  }
+
   let text = msg.raw ? msg.text : escape(msg.text).replace(/\n/g, '<br>')
-  let html = `<div class="msg-label">${label} · ${ts}</div><div class="msg-text">${text}</div>`
+  let html = `<div class="msg-label">${label} · ${ts}</div>`
+
+  if (!msg.raw && msg.full) {
+    let short = escape(msg.short).replace(/\n/g, '<br>')
+    html += `<div class="msg-text msg-text-short">${short} <span class="msg-more">Show more →</span></div>
+      <div class="msg-text msg-text-full" style="display:none">${text}</div>`
+  } else {
+    html += `<div class="msg-text">${text}</div>`
+  }
+
   const memories = msg.memories || []
-  if (memories.length && msg.role === 'ai') {
+  if (memories.length) {
     html += '<div class="msg-memories">'
     html += memories.slice(0, 6).map(m => {
       const s = m.metadata?.source ?? 'filesystem'
@@ -378,7 +394,19 @@ function renderChatMessage(msg) {
     }).join('')
     html += '</div>'
   }
+
   el.innerHTML = html
+
+  if (!msg.raw && msg.full) {
+    const more = el.querySelector('.msg-more')
+    if (more) {
+      more.addEventListener('click', () => {
+        el.querySelector('.msg-text-short').style.display = 'none'
+        el.querySelector('.msg-text-full').style.display = 'block'
+      })
+    }
+  }
+
   chat.appendChild(el)
 }
 
@@ -415,7 +443,16 @@ function addUserMsg(text) {
 
 function addAiMsg(text, memories, raw) {
   if (!activeConv) return
-  const msg = { role: 'ai', text, memories: memories || [], raw: !!raw, timestamp: new Date().toISOString() }
+  let short = text
+  let full = ''
+  if (!raw) {
+    const sepIdx = text.indexOf('---')
+    if (sepIdx !== -1) {
+      short = text.slice(0, sepIdx).trim()
+      full = text.slice(sepIdx + 3).trim()
+    }
+  }
+  const msg = { role: 'ai', text, short, full, memories: memories || [], raw: !!raw, timestamp: new Date().toISOString() }
   activeConv.messages.push(msg)
   renderChatMessage(msg)
   saveCurrentConversation()

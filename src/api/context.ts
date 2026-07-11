@@ -266,7 +266,12 @@ ${events.slice(0, 60).map(e => `[${e.source}] ${e.content}${e.metadata.app ? ` (
     const systemPrompt = hasData
       ? 'You are analyzing the user\'s computer activity log. Answer their question based ONLY on the activity data below. Be specific — mention apps, files, URLs, and projects by name. If the data is insufficient, say what you DO know rather than claiming emptiness.'
       : 'You are a helpful assistant. The user asked about their recent activity but no data is available yet.'
-    const userPrompt = `Based on my recent activity, please answer: ${query}\n\nMy recent memories:\n${context}`
+    const userPrompt = `Based on my recent activity, please answer: ${query}
+
+First, give a concise summary (under 40 words) on its own line, then a separator "---", then provide your full detailed answer.
+
+Recent activity:
+${context}`
 
     return this.callLLM(systemPrompt, userPrompt, llmUrl, llmModel, llmApiKey)
   }

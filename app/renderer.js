@@ -1,4 +1,4 @@
-const ICONS = { filesystem: '📁', browser: '🌐', editor: '✏️', terminal: '💻', system: '⚙️' }
+const ICONS = { filesystem: '📁', browser: '🌐', editor: '✏️', terminal: '💻', system: '⚙️', media: '🎵' }
 
 let username = 'there'
 let activeEvents = []

@@ -1,4 +1,4 @@
-export type EventSource = 'filesystem' | 'browser' | 'editor' | 'terminal' | 'system'
+export type EventSource = 'filesystem' | 'browser' | 'editor' | 'terminal' | 'system' | 'media'
 
 export type EventType =
   | 'file_opened'
@@ -16,6 +16,7 @@ export type EventType =
   | 'browser_tab_switch'
   | 'browser_scroll'
   | 'browser_focus'
+  | 'track_change'
 
 export interface Event {
   id?: string

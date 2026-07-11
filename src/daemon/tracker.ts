@@ -44,6 +44,8 @@ function Get-BrowserUrl {
 }
 $lastFgApp = ""
 $lastFgTitle = ""
+$lastMediaTitle = ""
+$lastMediaApp = ""
 $lastPsSnapshot = ""
 $fgEvents = @()
 $lastIdleTick = [Environment]::TickCount
@@ -94,6 +96,16 @@ while ($true) {
     }
   }
 
+  # Background media check (Spotify, etc. — even when not foreground)
+  $mediaApps = @("spotify","wmplayer","vlc","foobar2000")
+  foreach ($m in $mediaApps) {
+    $mp = Get-Process -Name $m -ErrorAction SilentlyContinue | Select-Object -First 1
+    if ($mp -and $mp.MainWindowTitle -and $mp.MainWindowTitle -ne $lastMediaTitle) {
+      $lastMediaTitle = $mp.MainWindowTitle; $lastMediaApp = $m
+      Write-Output ('{"t":"media","app":"' + $m + '","title":' + (ConvertTo-Json $mp.MainWindowTitle -Compress) + ',"ts":' + $epoch + '}')
+    }
+  }
+
   # Process snapshot every 10s
   if ($tick % 4 -eq 0) {
     $procs = Get-Process | Where-Object { $_.MainWindowTitle -ne "" } | Select-Object @{N="n";E={$_.ProcessName}},@{N="p";E={$_.Id}} | ConvertTo-Json -Compress
@@ -137,7 +149,14 @@ interface PSIdleEnd {
   ts: number
 }
 
-type PSEvent = PSForeground | PSBrowser | PSProcessList | PSIdleStart | PSIdleEnd
+interface PSMedia {
+  t: 'media'
+  app: string
+  title: string
+  ts: number
+}
+
+type PSEvent = PSForeground | PSBrowser | PSProcessList | PSIdleStart | PSIdleEnd | PSMedia
 
 export class SystemTracker {
   private client: SupermemoryClient
@@ -237,6 +256,10 @@ export class SystemTracker {
         case 'ps':
           this.onProcessSnapshot(evt)
           break
+
+        case 'media':
+          this.onMedia(evt)
+          break
       }
     } catch (err) {
       logger.warn(`tracker handler error: ${err}`)
@@ -290,6 +313,21 @@ export class SystemTracker {
     }
 
     this.previousProcs = current
+  }
+
+  private mediaTitles: Map<string, string> = new Map()
+
+  private onMedia(evt: PSMedia): void {
+    const last = this.mediaTitles.get(evt.app) ?? ''
+    if (evt.title === last) return
+    this.mediaTitles.set(evt.app, evt.title)
+    const sepIdx = evt.title.indexOf(' - ')
+    const artist = sepIdx !== -1 ? evt.title.slice(0, sepIdx).trim() : ''
+    const song = sepIdx !== -1 ? evt.title.slice(sepIdx + 3).trim() : evt.title
+    this.client.addDocument(createEvent('media', 'track_change', `Now playing: ${evt.title}`, {
+      app: evt.app, title: evt.title, artist, song,
+      tags: ['media', evt.app, timeBucket(new Date(evt.ts))],
+    }))
   }
 
   private guessProject(title: string, app: string): string {

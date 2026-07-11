@@ -52,7 +52,7 @@ async function ensureServer() {
   console.error('trace server failed to start')
 }
 
-function createWindow() {
+function createWindow(showOnStart) {
   const { width, height } = screen.getPrimaryDisplay().workAreaSize
   const winWidth = Math.min(700, width - 100)
   const winHeight = Math.min(500, height - 200)
@@ -82,6 +82,10 @@ function createWindow() {
   win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
 
   win.loadFile(path.join(__dirname, 'index.html'))
+
+  if (showOnStart) {
+    win.once('ready-to-show', () => { win.show(); win.focus() })
+  }
 
   let blurTimer = null
   win.on('blur', () => {
@@ -133,10 +137,27 @@ function createTray() {
 }
 
 app.whenReady().then(async () => {
-  await ensureServer()
-  createWindow()
+  // Load settings + create window first so user sees something immediately
+  const SETTINGS_PATH = path.join(app.getPath('userData'), 'settings.json')
+
+  function loadSettings() {
+    try {
+      if (!fs.existsSync(SETTINGS_PATH)) return null
+      return JSON.parse(fs.readFileSync(SETTINGS_PATH, 'utf-8'))
+    } catch { return null }
+  }
+
+  function saveSettings(s) {
+    try { fs.writeFileSync(SETTINGS_PATH, JSON.stringify(s, null, 2), 'utf-8'); return true }
+    catch { return false }
+  }
+
+  const settings = loadSettings()
+  const needsOnboarding = !settings || !settings.onboarded || !settings.name
+  createWindow(needsOnboarding)
   createTray()
 
+  // Register ALL IPC handlers before ensureServer so renderer can use them immediately
   const registered = globalShortcut.register('Alt+X', toggleWindow)
   if (!registered) {
     console.error('Alt+X shortcut registration failed, trying Alt+Space...')
@@ -148,6 +169,25 @@ app.whenReady().then(async () => {
   })
 
   ipcMain.handle('get-username', () => process.env.USERNAME || 'there')
+
+  ipcMain.handle('get-settings', async () => loadSettings())
+
+  ipcMain.handle('save-settings', async (_, settings) => saveSettings(settings))
+
+  ipcMain.handle('set-run-at-startup', async (_, enable) => {
+    try {
+      const execPath = process.env.APP_EXEC_PATH || process.execPath
+      app.setLoginItemSettings({
+        openAtLogin: enable,
+        path: execPath,
+        name: 'Trace',
+      })
+      return true
+    } catch (err) {
+      console.error('run-at-startup failed:', err.message)
+      return false
+    }
+  })
 
   ipcMain.handle('get-icon', () => {
     const iconPath = path.join(__dirname, 'assets', 'logo.png')
@@ -203,7 +243,6 @@ app.whenReady().then(async () => {
     } else {
       data.conversations.unshift(conv)
     }
-    // Cap at 50, keep newest
     if (data.conversations.length > 50) {
       data.conversations = data.conversations.slice(0, 50)
     }
@@ -221,7 +260,7 @@ app.whenReady().then(async () => {
   ipcMain.handle('exec-command', async (_, cmd) => {
     switch (cmd) {
       case 'restart': {
-        spawn('cmd', ['/c', 'start', '', path.join(__dirname, '..', 'start.bat')], {
+        spawn('wscript.exe', [path.join(__dirname, '..', 'start.vbs')], {
           detached: true, stdio: 'ignore', windowsHide: true,
         }).unref()
         app.quit()
@@ -235,6 +274,19 @@ app.whenReady().then(async () => {
         ensureServer()
         return 'Server restarted'
       }
+      case 'stop': {
+        if (serverProcess) {
+          serverProcess.kill()
+          serverProcess = null
+        }
+        spawn('cmd', ['/c', 'for /f "tokens=5" %a in (\'netstat -ano ^| findstr ":6768 "\') do taskkill /f /pid %a'], {
+          detached: true, stdio: 'ignore', windowsHide: true,
+        }).unref()
+        setTimeout(() => {
+          app.quit()
+        }, 500)
+        return 'Shutting down trace server and overlay...'
+      }
       default:
         return `Unknown command: ${cmd}`
     }
@@ -243,11 +295,12 @@ app.whenReady().then(async () => {
   ipcMain.handle('api-request', async (_, method, endpoint, body) => {
     return new Promise((resolve) => {
       const opts = {
-        hostname: 'localhost',
+        hostname: '127.0.0.1',
         port: API_PORT,
         path: endpoint,
         method,
         headers: body ? { 'Content-Type': 'application/json' } : {},
+        timeout: 60000,
       }
       const req = http.request(opts, (res) => {
         let data = ''
@@ -258,10 +311,13 @@ app.whenReady().then(async () => {
         })
       })
       req.on('error', () => resolve({ error: 'server unreachable' }))
+      req.on('timeout', () => { req.destroy(); resolve({ error: 'timeout' }) })
       if (body) req.write(JSON.stringify(body))
       req.end()
     })
   })
+
+  await ensureServer()
 })
 
 app.on('window-all-closed', () => {

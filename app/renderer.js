@@ -129,7 +129,14 @@ function formatTimestamp(ts) {
 // ---- conversations ----
 
 async function renderConversations() {
-  const list = await window.trace.conversationsList()
+  let list = await window.trace.conversationsList()
+  if (list) {
+    list = list.filter(c => {
+      if (c.title && c.title.trim().startsWith('/')) return false
+      if (c.preview && c.preview.trim().startsWith('/')) return false
+      return true
+    })
+  }
   if (!list || !list.length) {
     convSection.classList.remove('visible')
     return
@@ -224,7 +231,7 @@ let eventsKey = ''
 let lastSummary = null
 
 async function pollEvents() {
-  const data = await window.trace.api('GET', '/context/current')
+  const data = await withTimeout(window.trace.api('GET', '/context/current'), 10000)
   if (!data) {
     if (!eventsKey) greetingSub.textContent = 'Connecting...'
     return
@@ -239,12 +246,19 @@ async function pollEvents() {
   if (!chatMode) renderEvents()
 }
 
+function withTimeout(promise, ms) {
+  return Promise.race([
+    promise,
+    new Promise(r => setTimeout(() => r(null), ms))
+  ])
+}
+
 async function pollSummary() {
   if (!chatMode) {
     summary.classList.add('visible')
     document.getElementById('summary-loading').classList.add('visible')
   }
-  const data = await window.trace.api('GET', '/context/summary')
+  const data = await withTimeout(window.trace.api('GET', '/context/summary'), 10000)
   if (!chatMode) document.getElementById('summary-loading').classList.remove('visible')
   if (!data) return
   lastSummary = data
@@ -309,11 +323,14 @@ sendBtn.addEventListener('click', () => sendMessage())
 
 const COMMANDS = {
   help: { desc: 'Show available commands' },
+  chat: { desc: 'Show all previous chats' },
   new: { desc: 'Start a new conversation' },
   restart: { desc: 'Restart the entire app' },
   'restart-server': { desc: 'Restart the trace server only' },
+  stop: { desc: 'Stop all servers, UIs, and exit' },
   clear: { desc: 'Delete all stored memories' },
   status: { desc: 'Show daemon and supermemory status' },
+  onboarding: { desc: 'Re-show the onboarding wizard' },
 }
 
 async function handleCommand(cmd) {
@@ -331,8 +348,37 @@ async function handleCommand(cmd) {
   }
 
   switch (name) {
+    case 'chat': {
+      let list = await window.trace.conversationsList()
+      if (list) {
+        list = list.filter(c => {
+          if (c.title && c.title.trim().startsWith('/')) return false
+          if (c.preview && c.preview.trim().startsWith('/')) return false
+          return true
+        })
+      }
+      if (!list || !list.length) {
+        return 'No past conversations found.'
+      }
+      const items = list.map(c => {
+        const title = c.title || 'New conversation'
+        const date = formatTimestamp(c.createdAt)
+        const preview = c.preview ? escape(c.preview).slice(0, 60) : ''
+        return `<div class="conv-entry" style="padding: 10px; border-bottom: 1px solid rgba(255,255,255,0.04); margin-bottom: 8px; border-radius: 8px; cursor: pointer; display: flex; flex-direction: column; gap: 2px;" onclick="openConversation('${c.id}')">
+          <div style="font-weight: 600; color: rgba(100, 210, 255, 0.9);">💬 ${escape(title)}</div>
+          <div style="font-size: 11px; color: rgba(255,255,255,0.3);">
+            ${date} · ${c.messageCount} message${c.messageCount !== 1 ? 's' : ''}${preview ? ' · <span style="color: rgba(255,255,255,0.25)">' + preview + '</span>' : ''}
+          </div>
+        </div>`
+      }).join('')
+      return `<div style="display: flex; flex-direction: column; gap: 6px; padding: 4px 0;">
+        <div style="font-weight: 600; margin-bottom: 8px; color: #fff;">Past Conversations:</div>
+        ${items}
+      </div>`
+    }
     case 'restart':
     case 'restart-server':
+    case 'stop':
       return await window.trace.execCommand(name)
     case 'clear': {
       const result = await window.trace.api('DELETE', '/admin/memories')
@@ -342,6 +388,11 @@ async function handleCommand(cmd) {
       const s = await window.trace.api('GET', '/admin/status')
       if (!s) return 'Server unreachable.'
       return `Status: <b>${s.status}</b><br>Daemon: <b>${s.daemon ? 'running' : 'stopped'}</b><br>Supermemory: <b>${s.supermemory ? 'connected' : 'disconnected'}</b><br>Container: <code>${s.containerTag}</code>`
+    }
+    case 'onboarding': {
+      onbData = { name: '', theme: 'dark', runAtStartup: true, sources: ['browser', 'filesystem', 'editor', 'terminal'] }
+      showOnboarding()
+      return 'Opened onboarding wizard.'
     }
     default:
       return `Unknown command: /${name}`
@@ -362,26 +413,31 @@ async function sendMessage() {
   }
 
   if (!chatMode) enterChat()
-  addUserMsg(q)
-  showTyping()
-  scrollToBottom()
 
   if (q.startsWith('/')) {
+    showTyping()
+    scrollToBottom()
     const reply = await handleCommand(q)
     hideTyping()
-    addAiMsg(reply, [], true)
+    const msg = { role: 'ai', text: reply, raw: true, timestamp: new Date().toISOString() }
+    renderChatMessage(msg)
     scrollToBottom()
     return
   }
 
+  addUserMsg(q)
+  showTyping()
+  scrollToBottom()
+
   try {
+    const tz = -new Date().getTimezoneOffset()
     const endpoint = aiMode ? '/context/chat' : '/context/query'
-    const data = await window.trace.api('GET', `${endpoint}?q=${encodeURIComponent(q)}${aiMode ? '' : '&llm=true'}`)
+    const data = await window.trace.api('GET', `${endpoint}?q=${encodeURIComponent(q)}${aiMode ? '' : '&llm=true'}&tz=${tz}`)
     if (data?.answer) {
       addAiMsg(data.answer, data.memories ?? [])
     } else if (data?.memories?.length) {
-      const fallback = data.memories.map(m => m.title ?? m.content ?? m.memory ?? m.chunk ?? '').filter(Boolean).join('\n')
-      addAiMsg(fallback || 'No relevant activity found.', [])
+      const fallback = formatFallbackAnswer(q, data.memories)
+      addAiMsg(fallback, data.memories)
     } else {
       addAiMsg('No relevant activity found for that question.', [])
     }
@@ -420,15 +476,19 @@ function renderChatMessage(msg) {
   if (memories.length) {
     html += '<div class="msg-memories">'
     html += memories.slice(0, 6).map(m => {
-      const s = m.metadata?.source ?? 'filesystem'
+      const s = m.source ?? m.metadata?.source ?? 'filesystem'
       const icon = ICONS[s] ?? '📄'
       const title = m.title ?? m.content ?? m.memory ?? m.chunk ?? ''
       const detail = m.metadata?.path ?? m.metadata?.url ?? m.metadata?.project ?? ''
+      const isUrl = String(detail).startsWith('http')
+      const detailHtml = isUrl
+        ? `<a class="event-link" href="#" onclick="event.preventDefault(); window.trace.openUrl('${escape(detail)}')">${escape(detail)}</a>`
+        : escape(detail)
       return `<div class="event-item">
         <div class="event-icon ${s}">${icon}</div>
         <div class="event-body">
           <div class="event-title">${escape(title)}</div>
-          ${detail ? `<div class="event-detail">${escape(detail)}</div>` : ''}
+          ${detail ? `<div class="event-detail">${detailHtml}</div>` : ''}
         </div>
       </div>`
     }).join('')
@@ -524,4 +584,276 @@ function scrollToBottom() {
   requestAnimationFrame(() => {
     chat.scrollTop = chat.scrollHeight
   })
+}
+
+// ---- Onboarding ----
+
+let onbStep = 1
+let onbData = { name: '', theme: 'dark', runAtStartup: true, sources: ['browser', 'filesystem', 'editor', 'terminal'] }
+
+function getOnbEl(id) { return document.getElementById(id) }
+
+function showOnboarding() {
+  const overlay = document.getElementById('onboarding-overlay')
+  overlay.classList.add('visible')
+  goOnbStep(1)
+  setTimeout(() => getOnbEl('onb-name')?.focus(), 300)
+}
+
+function hideOnboarding() {
+  document.getElementById('onboarding-overlay').classList.remove('visible')
+}
+
+function goOnbStep(n) {
+  onbStep = n
+  document.querySelectorAll('.onb-panel').forEach(p => p.classList.remove('visible'))
+  document.querySelectorAll('.onb-step').forEach(s => s.classList.remove('active', 'done'))
+  for (let i = 1; i < n; i++) {
+    const step = document.querySelector(`.onb-step[data-step="${i}"]`)
+    if (step) step.classList.add('done')
+  }
+  const stepEl = document.querySelector(`.onb-step[data-step="${n}"]`)
+  if (stepEl) stepEl.classList.add('active')
+  const panel = document.querySelector(`.onb-panel[data-panel="${n}"]`)
+  if (panel) panel.classList.add('visible')
+}
+
+function initOnboarding() {
+  // Step 1: Name
+  getOnbEl('onb-next-1').addEventListener('click', () => {
+    const name = getOnbEl('onb-name').value.trim()
+    if (!name) { getOnbEl('onb-name').focus(); return }
+    onbData.name = name
+    goOnbStep(2)
+  })
+  getOnbEl('onb-name').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') getOnbEl('onb-next-1').click()
+  })
+
+  // Step 2: Theme
+  document.querySelectorAll('.onb-theme-card').forEach(card => {
+    card.addEventListener('click', () => {
+      document.querySelectorAll('.onb-theme-card').forEach(c => c.classList.remove('selected'))
+      card.classList.add('selected')
+      card.querySelector('input[type="radio"]').checked = true
+    })
+  })
+  getOnbEl('onb-next-2').addEventListener('click', () => {
+    const selected = document.querySelector('.onb-theme-card.selected')
+    onbData.theme = selected ? selected.dataset.theme : 'dark'
+    goOnbStep(3)
+  })
+
+  // Step 3: Startup
+  getOnbEl('onb-next-3').addEventListener('click', () => {
+    onbData.runAtStartup = getOnbEl('onb-startup').checked
+    goOnbStep(4)
+  })
+
+  // Step 4: Sources
+  document.querySelectorAll('.onb-source').forEach(el => {
+    el.addEventListener('click', () => {
+      el.classList.toggle('checked')
+      const cb = el.querySelector('input[type="checkbox"]')
+      cb.checked = !cb.checked
+    })
+  })
+  getOnbEl('onb-next-4').addEventListener('click', () => {
+    const checked = document.querySelectorAll('.onb-source.checked')
+    onbData.sources = Array.from(checked).map(el => el.dataset.source)
+    goOnbStep(5)
+  })
+
+  // Step 5: Done
+  getOnbEl('onb-done').addEventListener('click', async () => {
+    getOnbEl('onb-done').disabled = true
+    getOnbEl('onb-done').textContent = 'Saving...'
+    onbData.onboarded = true
+    await window.trace.saveSettings(onbData)
+    if (onbData.runAtStartup) await window.trace.setRunAtStartup(true)
+    applyTheme(onbData.theme)
+    username = onbData.name
+    renderGreeting()
+    hideOnboarding()
+  })
+}
+
+function populateOnbSummary() {
+  getOnbEl('onb-summary-name').textContent = onbData.name
+  getOnbEl('onb-summary-theme').textContent = onbData.theme === 'dark' ? 'Dark' : 'Light'
+  getOnbEl('onb-summary-startup').textContent = onbData.runAtStartup ? 'Yes' : 'No'
+  const sourceNames = { browser: 'Browser', filesystem: 'Files', editor: 'Editor', terminal: 'Terminal' }
+  getOnbEl('onb-summary-sources').textContent = onbData.sources.map(s => sourceNames[s] || s).join(', ')
+}
+
+function applyTheme(theme) {
+  document.body.classList.toggle('light', theme === 'light')
+}
+
+// Override goOnbStep to refresh summary on step 5
+const _origGoOnbStep = goOnbStep
+goOnbStep = function(n) {
+  _origGoOnbStep(n)
+  if (n === 5) populateOnbSummary()
+}
+
+// Check if onboarding needed
+loadInitialState = (function(orig) {
+  return async function() {
+    const settings = await window.trace.getSettings()
+    if (!settings || !settings.onboarded || !settings.name) {
+      showOnboarding()
+      orig()
+      return
+    }
+    username = settings.name || username
+    renderGreeting()
+    if (settings.theme) applyTheme(settings.theme)
+    orig()
+  }
+})(loadInitialState)
+
+// Init onboarding at the end (after DOM ready)
+initOnboarding()
+
+function cleanTitle(text) {
+  if (!text) return ''
+  let clean = text
+  clean = clean.replace(/^[a-zA-Z0-9_-]+\s+·\s+/, '')
+  clean = clean.replace(/\s+and\s+\d+\s+more\s+page.*/gi, '')
+  clean = clean.replace(/\s*-\s*Zeny\s*-\s*Microsoft.*Edge/gi, '')
+  clean = clean.replace(/\s*-\s*Microsoft.*Edge/gi, '')
+  clean = clean.replace(/\s*-\s*Google Chrome/gi, '')
+  clean = clean.replace(/\s*-\s*Brave.*/gi, '')
+  clean = clean.replace(/\s*-\s*Vivaldi/gi, '')
+  clean = clean.replace(/\s*-\s*YouTube/gi, '')
+  clean = clean.replace(/\s*-\s*Netflix/gi, '')
+  clean = clean.replace(/\s*-\s*Discord/gi, '')
+  clean = clean.replace(/^\(\d+\)\s+/, '')
+  clean = clean.replace(/^Now playing:\s+/i, '')
+  return clean.trim()
+}
+
+function formatFallbackAnswer(query, memories) {
+  if (!memories || memories.length === 0) {
+    return "I couldn't find any matching activity in your logs.\n---\nNo recent events matched your query."
+  }
+
+  const sorted = [...memories].sort((a, b) => {
+    const tA = a.createdAt ? new Date(a.createdAt).getTime() : 0
+    const tB = b.createdAt ? new Date(b.createdAt).getTime() : 0
+    return tB - tA
+  })
+
+  const cleanQuery = query.toLowerCase()
+  const seen = new Set()
+  const unique = []
+  for (const m of sorted) {
+    const rawText = m.title ?? m.content ?? m.memory ?? m.chunk ?? ''
+    if (!rawText) continue
+    const clean = cleanTitle(rawText).toLowerCase().trim()
+    if (seen.has(clean)) continue
+    seen.add(clean)
+    unique.push(m)
+  }
+
+  let specificAnswer = ''
+  const getRelativeTime = (createdAt) => {
+    if (!createdAt) return 'some time ago'
+    const diff = Date.now() - new Date(createdAt).getTime()
+    if (diff < 60000) return 'just now'
+    const m = Math.floor(diff / 60000)
+    if (m < 60) return `${m}m ago`
+    const h = Math.floor(m / 60)
+    if (h < 24) return `${h}h ago`
+    return new Date(createdAt).toLocaleDateString()
+  }
+
+  const ICONS = { filesystem: '📁', browser: '🌐', editor: '✏️', terminal: '💻', system: '⚙️', media: '🎵' }
+
+  if (cleanQuery.includes('youtube') || cleanQuery.includes('video') || cleanQuery.includes('watch')) {
+    const ytEvent = unique.find(m => {
+      const text = (m.title ?? m.content ?? m.memory ?? m.chunk ?? '').toLowerCase()
+      const url = String(m.metadata?.url ?? '').toLowerCase()
+      return text.includes('youtube') || url.includes('youtube.com') || url.includes('youtu.be')
+    })
+    if (ytEvent) {
+      const title = cleanTitle(ytEvent.title ?? ytEvent.content ?? ytEvent.memory ?? ytEvent.chunk ?? '')
+      specificAnswer = `The last YouTube video you watched was **${title}** (${getRelativeTime(ytEvent.createdAt)}).`
+    }
+  }
+
+  if (!specificAnswer && (cleanQuery.includes('song') || cleanQuery.includes('music') || cleanQuery.includes('spotify') || cleanQuery.includes('playing') || cleanQuery.includes('listen'))) {
+    const mediaEvent = unique.find(m => {
+      const text = (m.title ?? m.content ?? m.memory ?? m.chunk ?? '').toLowerCase()
+      const source = String(m.source ?? m.metadata?.source ?? '').toLowerCase()
+      return source === 'media' || text.includes('now playing') || text.includes('spotify')
+    })
+    if (mediaEvent) {
+      const title = cleanTitle(mediaEvent.title ?? mediaEvent.content ?? mediaEvent.memory ?? mediaEvent.chunk ?? '')
+      specificAnswer = `The last song you listened to was **${title}** (${getRelativeTime(mediaEvent.createdAt)}).`
+    }
+  }
+
+  if (!specificAnswer && (cleanQuery.includes('netflix') || cleanQuery.includes('movie') || cleanQuery.includes('show'))) {
+    const netflixEvent = unique.find(m => {
+      const text = (m.title ?? m.content ?? m.memory ?? m.chunk ?? '').toLowerCase()
+      const url = String(m.metadata?.url ?? '').toLowerCase()
+      return text.includes('netflix') || url.includes('netflix.com')
+    })
+    if (netflixEvent) {
+      const title = cleanTitle(netflixEvent.title ?? netflixEvent.content ?? netflixEvent.memory ?? netflixEvent.chunk ?? '')
+      specificAnswer = `The last Netflix page you visited was **${title}** (${getRelativeTime(netflixEvent.createdAt)}).`
+    }
+  }
+
+  if (!specificAnswer && (cleanQuery.includes('search') || cleanQuery.includes('google'))) {
+    const searchEvent = unique.find(m => {
+      const text = (m.title ?? m.content ?? m.memory ?? m.chunk ?? '').toLowerCase()
+      return text.includes('google search:') || text.includes('searchquery')
+    })
+    if (searchEvent) {
+      const title = cleanTitle(searchEvent.title ?? searchEvent.content ?? searchEvent.memory ?? searchEvent.chunk ?? '')
+      specificAnswer = `Your last search was for **${title}** (${getRelativeTime(searchEvent.createdAt)}).`
+    }
+  }
+
+  if (!specificAnswer && (cleanQuery.includes('discord') || cleanQuery.includes('chat') || cleanQuery.includes('message'))) {
+    const discordEvent = unique.find(m => {
+      const text = (m.title ?? m.content ?? m.memory ?? m.chunk ?? '').toLowerCase()
+      const app = String(m.metadata?.app ?? '').toLowerCase()
+      return text.includes('discord') || app === 'discord'
+    })
+    if (discordEvent) {
+      const title = cleanTitle(discordEvent.title ?? discordEvent.content ?? discordEvent.memory ?? discordEvent.chunk ?? '')
+      specificAnswer = `You were last active on Discord in **${title}** (${getRelativeTime(discordEvent.createdAt)}).`
+    }
+  }
+
+  if (!specificAnswer && (cleanQuery.includes('file') || cleanQuery.includes('code') || cleanQuery.includes('editor') || cleanQuery.includes('project') || cleanQuery.includes('work'))) {
+    const fileEvent = unique.find(m => {
+      const source = String(m.source ?? m.metadata?.source ?? '').toLowerCase()
+      return source === 'filesystem' || source === 'editor'
+    })
+    if (fileEvent) {
+      const title = cleanTitle(fileEvent.title ?? fileEvent.content ?? fileEvent.memory ?? fileEvent.chunk ?? '')
+      specificAnswer = `You were last working on **${title}** (${getRelativeTime(fileEvent.createdAt)}).`
+    }
+  }
+
+  if (!specificAnswer) {
+    specificAnswer = `I found ${unique.length} matching activities in your log.`
+  }
+
+  const detailLines = unique.slice(0, 15).map(m => {
+    const rawText = m.title ?? m.content ?? m.memory ?? m.chunk ?? ''
+    const clean = cleanTitle(rawText)
+    const src = m.source ?? m.metadata?.source ?? 'filesystem'
+    const icon = ICONS[src] ?? '📄'
+    const relativeTime = getRelativeTime(m.createdAt)
+    const app = m.metadata?.app ?? src
+    return `${icon} **${clean}** (${app} · ${relativeTime})`
+  }).join('\n')
+
+  return `${specificAnswer}\n---\nHere is the timeline of matching activity:\n${detailLines}`
 }

@@ -13,4 +13,7 @@ contextBridge.exposeInMainWorld('trace', {
   conversationGet: (id) => ipcRenderer.invoke('conversation-get', id),
   conversationSave: (conv) => ipcRenderer.invoke('conversation-save', conv),
   conversationDelete: (id) => ipcRenderer.invoke('conversation-delete', id),
+  getSettings: () => ipcRenderer.invoke('get-settings'),
+  saveSettings: (s) => ipcRenderer.invoke('save-settings', s),
+  setRunAtStartup: (enable) => ipcRenderer.invoke('set-run-at-startup', enable),
 })

@@ -250,6 +250,15 @@ html, body {
   margin-top: 1px;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
+.event-link {
+  color: rgba(100, 210, 255, 0.75);
+  text-decoration: none;
+  transition: color 0.15s;
+}
+.event-link:hover {
+  color: rgba(100, 210, 255, 1);
+  text-decoration: underline;
+}
 .event-time {
   font-size: 11px;
   color: rgba(255,255,255,0.12);
@@ -364,6 +373,208 @@ kbd {
   color: rgba(255,255,255,0.15);
 }
 #summary-loading.visible { display: block; }
+
+/* ---- Onboarding ---- */
+#onboarding-overlay {
+  position: fixed; inset: 0; z-index: 100;
+  display: none;
+  align-items: center; justify-content: center;
+  background: rgba(0,0,0,0.5);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  animation: fadeIn 0.2s ease;
+}
+#onboarding-overlay.visible { display: flex; }
+@keyframes fadeIn { from { opacity:0 } to { opacity:1 } }
+#onboarding {
+  width: 420px; max-width: 90vw;
+  background: #1a1a20;
+  border-radius: 16px;
+  padding: 32px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+  animation: popIn 0.25s cubic-bezier(0.16,1,0.3,1);
+}
+#onboarding-steps {
+  display: flex; align-items: center; justify-content: center;
+  gap: 0; margin-bottom: 28px;
+}
+.onb-step { display: flex; align-items: center; gap: 0; }
+.onb-step-icon {
+  width: 26px; height: 26px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 600;
+  background: rgba(255,255,255,0.06);
+  color: rgba(255,255,255,0.2);
+  transition: all 0.25s;
+}
+.onb-step.active .onb-step-icon {
+  background: #6c8cff;
+  color: #fff;
+}
+.onb-step.done .onb-step-icon {
+  background: #32d74b;
+  color: #fff;
+}
+.onb-step.done .onb-step-icon::after { content: ''; }
+.onb-step-line {
+  width: 32px; height: 2px;
+  background: rgba(255,255,255,0.06);
+  margin: 0 6px;
+  transition: background 0.25s;
+}
+.onb-step.done + .onb-step .onb-step-line { background: rgba(50,215,75,0.3); }
+.onb-panel { display: none; flex-direction: column; align-items: center; text-align: center; }
+.onb-panel.visible { display: flex; }
+.onb-logo {
+  width: 48px; height: 48px; border-radius: 14px;
+  background: linear-gradient(135deg, #6c8cff, #8b5cf6);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; font-weight: 700; color: #fff;
+  margin-bottom: 16px;
+}
+.onb-title {
+  font-size: 20px; font-weight: 700;
+  color: #fff; margin-bottom: 6px;
+}
+.onb-desc {
+  font-size: 13px; line-height: 1.5;
+  color: rgba(255,255,255,0.35);
+  margin-bottom: 20px; max-width: 320px;
+}
+.onb-input {
+  width: 100%; max-width: 280px;
+  padding: 10px 14px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 10px;
+  color: #fff;
+  font-size: 15px; font-family: inherit;
+  outline: none; text-align: center;
+  margin-bottom: 16px;
+  transition: border-color 0.15s;
+}
+.onb-input:focus { border-color: rgba(108,140,255,0.4); }
+.onb-input::placeholder { color: rgba(255,255,255,0.15); }
+.onb-btn {
+  padding: 8px 22px;
+  border: none; border-radius: 8px;
+  background: rgba(255,255,255,0.06);
+  color: rgba(255,255,255,0.6);
+  font-size: 14px; font-family: inherit;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.onb-btn:hover { background: rgba(255,255,255,0.1); color: #fff; }
+.onb-btn-primary { background: #6c8cff; color: #fff; font-weight: 600; }
+.onb-btn-primary:hover { background: #5a7ae8; }
+/* Theme cards */
+.onb-themes { display: flex; gap: 12px; margin-bottom: 20px; }
+.onb-theme-card {
+  width: 140px; padding: 12px;
+  border-radius: 12px;
+  border: 2px solid rgba(255,255,255,0.06);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+.onb-theme-card.selected { border-color: #6c8cff; background: rgba(108,140,255,0.06); }
+.onb-theme-card:hover { border-color: rgba(108,140,255,0.3); }
+.onb-theme-preview {
+  height: 70px; border-radius: 8px; overflow: hidden;
+  margin-bottom: 8px;
+}
+.dark-preview { background: #121216; }
+.light-preview { background: #f5f5f7; }
+.tp-bar { height: 10px; background: rgba(255,255,255,0.06); }
+.light-preview .tp-bar { background: rgba(0,0,0,0.06); }
+.tp-body { padding: 8px; }
+.tp-line { height: 6px; width: 100%; border-radius: 3px; margin-bottom: 4px; }
+.dark-preview .tp-line { background: rgba(255,255,255,0.06); }
+.light-preview .tp-line { background: rgba(0,0,0,0.06); }
+.tp-line.short { width: 60%; }
+.onb-theme-name { font-size: 13px; font-weight: 500; color: rgba(255,255,255,0.6); text-align: center; }
+/* Toggle */
+.onb-toggle-row {
+  display: flex; align-items: center; justify-content: space-between;
+  width: 100%; max-width: 300px; padding: 10px 0; margin-bottom: 20px;
+}
+.onb-toggle-label { font-size: 14px; color: rgba(255,255,255,0.7); }
+.onb-toggle { position: relative; display: inline-block; width: 40px; height: 22px; cursor: pointer; }
+.onb-toggle input { display: none; }
+.onb-toggle-slider {
+  position: absolute; inset: 0;
+  background: rgba(255,255,255,0.08);
+  border-radius: 22px;
+  transition: background 0.2s;
+}
+.onb-toggle-slider::before {
+  content: ''; position: absolute;
+  width: 18px; height: 18px; left: 2px; bottom: 2px;
+  background: #fff; border-radius: 50%;
+  transition: transform 0.2s;
+}
+.onb-toggle input:checked + .onb-toggle-slider { background: #32d74b; }
+.onb-toggle input:checked + .onb-toggle-slider::before { transform: translateX(18px); }
+/* Source checkboxes */
+.onb-sources { display: flex; flex-direction: column; gap: 6px; width: 100%; margin-bottom: 20px; }
+.onb-source {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 2px solid rgba(255,255,255,0.06);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+.onb-source.checked { border-color: rgba(108,140,255,0.3); background: rgba(108,140,255,0.04); }
+.onb-source-icon { font-size: 16px; width: 28px; text-align: center; }
+.onb-source-info { display: flex; flex-direction: column; text-align: left; }
+.onb-source-name { font-size: 14px; font-weight: 500; color: rgba(255,255,255,0.7); }
+.onb-source-desc { font-size: 11px; color: rgba(255,255,255,0.25); }
+/* Summary */
+.onb-summary { width: 100%; margin-bottom: 20px; }
+.onb-summary-row {
+  display: flex; justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.03);
+  font-size: 13px;
+}
+.onb-summary-row span:first-child { color: rgba(255,255,255,0.25); }
+.onb-summary-row span:last-child { color: rgba(255,255,255,0.7); font-weight: 500; }
+/* Light theme overrides */
+body.light #window { background: #f0f0f2; }
+body.light #search-input { color: #1a1a20; }
+body.light #search-input::placeholder { color: rgba(0,0,0,0.15); }
+body.light #greeting-text { color: #1a1a20; }
+body.light #greeting-sub { color: rgba(0,0,0,0.25); }
+body.light .event-title { color: #2a2a30; }
+body.light .event-detail { color: rgba(0,0,0,0.2); }
+body.light .event-time { color: rgba(0,0,0,0.12); }
+body.light .msg-text { color: #3a3a40; }
+body.light .chat-msg.user .msg-text { color: rgba(0,0,0,0.35); }
+body.light .onb-summary-row span:first-child { color: rgba(0,0,0,0.2); }
+body.light .onb-summary-row span:last-child { color: #1a1a20; }
+body.light .stat-chip { border-color: rgba(0,0,0,0.04); color: rgba(0,0,0,0.15); background: rgba(0,0,0,0.02); }
+body.light .stat-chip b { color: rgba(0,0,0,0.3); }
+body.light .conv-entry-title { color: #2a2a30; }
+body.light .conv-entry-meta { color: rgba(0,0,0,0.12); }
+body.light #convs-header { color: rgba(0,0,0,0.08); }
+body.light .msg-label { color: rgba(0,0,0,0.1); }
+body.light .inline-code { background: rgba(0,0,0,0.04); color: rgba(0,0,0,0.5); }
+body.light #footer { color: rgba(0,0,0,0.08); }
+body.light kbd { background: rgba(0,0,0,0.03); border-color: rgba(0,0,0,0.04); color: rgba(0,0,0,0.1); }
+body.light #onboarding { background: #ffffff; }
+body.light .onb-title { color: #1a1a20; }
+body.light .onb-desc { color: rgba(0,0,0,0.3); }
+body.light .onb-input { background: rgba(0,0,0,0.03); border-color: rgba(0,0,0,0.08); color: #1a1a20; }
+body.light .onb-input::placeholder { color: rgba(0,0,0,0.12); }
+body.light .onb-btn { background: rgba(0,0,0,0.04); color: rgba(0,0,0,0.4); }
+body.light .onb-btn:hover { background: rgba(0,0,0,0.08); color: #1a1a20; }
+body.light .onb-summary-row { border-bottom-color: rgba(0,0,0,0.03); }
+body.light .onb-source-name { color: rgba(0,0,0,0.6); }
+body.light .onb-source-desc { color: rgba(0,0,0,0.2); }
+body.light .onb-toggle-label { color: rgba(0,0,0,0.5); }
+body.light .onb-theme-name { color: rgba(0,0,0,0.4); }
+body.light .onb-step.active .onb-step-icon { background: #6c8cff; }
+body.light .onb-step.done .onb-step-icon { background: #32d74b; }
 </style>
 </head>
 <body>
@@ -402,6 +613,133 @@ kbd {
     <span><kbd>↵</kbd> ask</span>
     <span><kbd>/</kbd><kbd>new</kbd> new chat</span>
     <span><kbd>Esc</kbd> back / close</span>
+  </div>
+</div>
+
+<div id="onboarding-overlay">
+  <div id="onboarding">
+    <div id="onboarding-steps">
+      <div class="onb-step active" data-step="1">
+        <div class="onb-step-icon">1</div>
+        <div class="onb-step-line"></div>
+      </div>
+      <div class="onb-step" data-step="2">
+        <div class="onb-step-icon">2</div>
+        <div class="onb-step-line"></div>
+      </div>
+      <div class="onb-step" data-step="3">
+        <div class="onb-step-icon">3</div>
+        <div class="onb-step-line"></div>
+      </div>
+      <div class="onb-step" data-step="4">
+        <div class="onb-step-icon">4</div>
+        <div class="onb-step-line"></div>
+      </div>
+      <div class="onb-step" data-step="5">
+        <div class="onb-step-icon">5</div>
+      </div>
+    </div>
+
+    <!-- Step 1: Name -->
+    <div class="onb-panel visible" data-panel="1">
+      <div class="onb-logo">trace</div>
+      <div class="onb-title">Hey! What should I call you?</div>
+      <div class="onb-desc">Your name will appear in the greeting when you open trace.</div>
+      <input id="onb-name" class="onb-input" type="text" placeholder="Enter your name..." maxlength="40" autofocus>
+      <button class="onb-btn" id="onb-next-1">Let's go →</button>
+    </div>
+
+    <!-- Step 2: Theme -->
+    <div class="onb-panel" data-panel="2">
+      <div class="onb-title">Choose your look</div>
+      <div class="onb-desc">Pick a theme that's easy on your eyes.</div>
+      <div class="onb-themes">
+        <label class="onb-theme-card selected" data-theme="dark">
+          <div class="onb-theme-preview dark-preview">
+            <div class="tp-bar"></div><div class="tp-body"><div class="tp-line"></div><div class="tp-line short"></div></div>
+          </div>
+          <div class="onb-theme-name">Dark</div>
+          <input type="radio" name="theme" value="dark" checked hidden>
+        </label>
+        <label class="onb-theme-card" data-theme="light">
+          <div class="onb-theme-preview light-preview">
+            <div class="tp-bar"></div><div class="tp-body"><div class="tp-line"></div><div class="tp-line short"></div></div>
+          </div>
+          <div class="onb-theme-name">Light</div>
+          <input type="radio" name="theme" value="light" hidden>
+        </label>
+      </div>
+      <button class="onb-btn" id="onb-next-2">Continue →</button>
+    </div>
+
+    <!-- Step 3: Run at startup -->
+    <div class="onb-panel" data-panel="3">
+      <div class="onb-title">Launch on startup?</div>
+      <div class="onb-desc">Start trace automatically when you log in to Windows so you never miss a moment.</div>
+      <div class="onb-toggle-row">
+        <span class="onb-toggle-label">Run trace at startup</span>
+        <label class="onb-toggle">
+          <input type="checkbox" id="onb-startup" checked>
+          <span class="onb-toggle-slider"></span>
+        </label>
+      </div>
+      <button class="onb-btn" id="onb-next-3">Continue →</button>
+    </div>
+
+    <!-- Step 4: Tracking sources -->
+    <div class="onb-panel" data-panel="4">
+      <div class="onb-title">What should I track?</div>
+      <div class="onb-desc">Choose the activities you want trace to remember. You can change these later.</div>
+      <div class="onb-sources">
+        <label class="onb-source checked" data-source="browser">
+          <span class="onb-source-icon">🌐</span>
+          <span class="onb-source-info">
+            <span class="onb-source-name">Browser</span>
+            <span class="onb-source-desc">Pages you visit, searches, URLs</span>
+          </span>
+          <input type="checkbox" value="browser" checked hidden>
+        </label>
+        <label class="onb-source checked" data-source="filesystem">
+          <span class="onb-source-icon">📁</span>
+          <span class="onb-source-info">
+            <span class="onb-source-name">Files</span>
+            <span class="onb-source-desc">Files you open and edit</span>
+          </span>
+          <input type="checkbox" value="filesystem" checked hidden>
+        </label>
+        <label class="onb-source checked" data-source="editor">
+          <span class="onb-source-icon">✏️</span>
+          <span class="onb-source-info">
+            <span class="onb-source-name">Editor</span>
+            <span class="onb-source-desc">Git commits, code changes</span>
+          </span>
+          <input type="checkbox" value="editor" checked hidden>
+        </label>
+        <label class="onb-source checked" data-source="terminal">
+          <span class="onb-source-icon">💻</span>
+          <span class="onb-source-info">
+            <span class="onb-source-name">Terminal</span>
+            <span class="onb-source-desc">Commands you run, errors</span>
+          </span>
+          <input type="checkbox" value="terminal" checked hidden>
+        </label>
+      </div>
+      <button class="onb-btn" id="onb-next-4">Continue →</button>
+    </div>
+
+    <!-- Step 5: Done -->
+    <div class="onb-panel" data-panel="5">
+      <div class="onb-logo">✓</div>
+      <div class="onb-title">You're all set!</div>
+      <div class="onb-desc">trace will now remember your activity and help you find it later. Press <kbd>Alt+X</kbd> anytime to open trace.</div>
+      <div class="onb-summary">
+        <div class="onb-summary-row"><span>Name</span><span id="onb-summary-name"></span></div>
+        <div class="onb-summary-row"><span>Theme</span><span id="onb-summary-theme"></span></div>
+        <div class="onb-summary-row"><span>Startup</span><span id="onb-summary-startup"></span></div>
+        <div class="onb-summary-row"><span>Tracking</span><span id="onb-summary-sources"></span></div>
+      </div>
+      <button class="onb-btn onb-btn-primary" id="onb-done">Start using trace</button>
+    </div>
   </div>
 </div>
 <script src="renderer.js"></script>

@@ -25,9 +25,10 @@ export function createApi(config: Config, supermemory: SupermemoryClient, daemon
       const q = (req.query.q as string) ?? ''
       if (!q) { res.status(400).json({ error: 'q required' }); return }
       const useLLM = req.query.llm === 'true'
+      const tz = parseInt(req.query.tz as string, 10) || 0
       const result = useLLM
-        ? await context.queryWithLLM(q, config.llmUrl, config.llmModel, config.llmApiKey)
-        : await context.searchContext(q)
+        ? await context.queryWithLLM(q, config.llmUrl, config.llmModel, config.llmApiKey, tz)
+        : await context.searchContext(q, tz)
       res.json(result)
     } catch (err) {
       res.status(500).json({ error: String(err) })
@@ -45,9 +46,10 @@ export function createApi(config: Config, supermemory: SupermemoryClient, daemon
     }
   })
 
-  app.get('/context/summary', async (_req: Request, res: Response) => {
+  app.get('/context/summary', async (req: Request, res: Response) => {
     try {
-      const result = await context.getSummary()
+      const since = req.query.since as string | undefined
+      const result = await context.getSummary(since)
       res.json(result)
     } catch (err) {
       res.status(500).json({ error: String(err) })

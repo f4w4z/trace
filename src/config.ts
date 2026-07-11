@@ -1,9 +1,13 @@
 import dotenv from 'dotenv'
 import path from 'path'
 import os from 'os'
+import { fileURLToPath } from 'url'
 import type { Config, EventSource } from './types.js'
 
-dotenv.config()
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
+
+dotenv.config({ path: path.resolve(__dirname, '..', '.env') })
 
 const user = os.userInfo().username
 

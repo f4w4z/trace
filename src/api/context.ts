@@ -33,9 +33,9 @@ export class ContextService {
 
   async queryWithLLM(query: string, llmUrl?: string, llmModel?: string, llmApiKey?: string): Promise<QueryResult> {
     const results = (await this.client.searchQuery(query, 30)).filter(d => !this.isSummary(d))
-    const recent = (await this.client.listDocuments(500)).filter(d => !this.isSummary(d))
+    const recent = (await this.client.listDocuments(2000)).filter(d => !this.isSummary(d))
     const seen = new Set(results.map(r => r.id))
-    const combined = [...results, ...recent.filter(r => !seen.has(r.id))]
+    let combined = [...results, ...recent.filter(r => !seen.has(r.id))]
     let answer: string | undefined
     if (llmUrl && llmModel) {
       answer = await this.askLLM(query, combined, llmUrl, llmModel, llmApiKey)

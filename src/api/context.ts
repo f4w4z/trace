@@ -35,18 +35,23 @@ export class ContextService {
     const results = (await this.client.searchQuery(query, 30)).filter(d => !this.isSummary(d))
     const recent = (await this.client.listDocuments(0)).filter(d => !this.isSummary(d))
     const seen = new Set(results.map(r => r.id))
-    let combined = [...results, ...recent.filter(r => !seen.has(r.id))]
-    // Broaden search with individual keywords so "listening" can match "Now playing: ..."
+    // Broaden with individual keywords directly from loaded events
     const words = query.toLowerCase().split(/\s+/).filter(w => w.length > 3 && !['what', 'were', 'when', 'where', 'that', 'this', 'there', 'with', 'have', 'been', 'your', 'about', 'tell', 'from'].includes(w))
+    const kwMatches: SupermemoryMemory[] = []
     for (const word of words) {
-      for (const r of await this.client.searchQuery(word, 20)) {
-        if (!seen.has(r.id) && !this.isSummary(r)) {
-          combined.push(r); seen.add(r.id)
+      let count = 0
+      for (const r of recent) {
+        if (count >= 15) break
+        if (seen.has(r.id) || this.isSummary(r)) continue
+        const content = (r.content ?? '').toLowerCase()
+        const meta = JSON.stringify(r.metadata ?? {}).toLowerCase()
+        if (content.includes(word) || meta.includes(word)) {
+          kwMatches.push(r); seen.add(r.id); count++
         }
       }
     }
-    // Sort newest-first so keyword matches bubble up into the LLM's 80-item window
-    combined.sort((a, b) => ((b.createdAt ?? '') > (a.createdAt ?? '') ? 1 : -1))
+    // Put keyword matches right after results so the LLM sees them first
+    const combined = [...results, ...kwMatches, ...recent.filter(r => !seen.has(r.id) && !this.isSummary(r))]
     let answer: string | undefined
     if (llmUrl && llmModel) {
       answer = await this.askLLM(query, combined, llmUrl, llmModel, llmApiKey)

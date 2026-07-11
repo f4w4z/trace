@@ -27,7 +27,23 @@ export function createApi(config: Config, supermemory: SupermemoryClient, daemon
       const useLLM = req.query.llm === 'true'
       const tz = parseInt(req.query.tz as string, 10) || 0
       const result = useLLM
-        ? await context.queryWithLLM(q, config.llmUrl, config.llmModel, config.llmApiKey, tz)
+        ? await context.queryWithLLM(q, [], config.llmUrl, config.llmModel, config.llmApiKey, tz)
+        : await context.searchContext(q, tz)
+      res.json(result)
+    } catch (err) {
+      res.status(500).json({ error: String(err) })
+    }
+  })
+
+  app.post('/context/query', async (req: Request, res: Response) => {
+    try {
+      const q = req.body.q ?? ''
+      const history = req.body.history ?? []
+      if (!q) { res.status(400).json({ error: 'q required' }); return }
+      const useLLM = req.body.llm === true
+      const tz = parseInt(req.body.tz, 10) || 0
+      const result = useLLM
+        ? await context.queryWithLLM(q, history, config.llmUrl, config.llmModel, config.llmApiKey, tz)
         : await context.searchContext(q, tz)
       res.json(result)
     } catch (err) {
@@ -39,7 +55,19 @@ export function createApi(config: Config, supermemory: SupermemoryClient, daemon
     try {
       const q = (req.query.q as string) ?? ''
       if (!q) { res.status(400).json({ error: 'q required' }); return }
-      const result = await context.chat(q, config.llmUrl, config.llmModel, config.llmApiKey)
+      const result = await context.chat(q, [], config.llmUrl, config.llmModel, config.llmApiKey)
+      res.json(result)
+    } catch (err) {
+      res.status(500).json({ error: String(err) })
+    }
+  })
+
+  app.post('/context/chat', async (req: Request, res: Response) => {
+    try {
+      const q = req.body.q ?? ''
+      const history = req.body.history ?? []
+      if (!q) { res.status(400).json({ error: 'q required' }); return }
+      const result = await context.chat(q, history, config.llmUrl, config.llmModel, config.llmApiKey)
       res.json(result)
     } catch (err) {
       res.status(500).json({ error: String(err) })
@@ -115,7 +143,7 @@ export function createApi(config: Config, supermemory: SupermemoryClient, daemon
           const q = (args?.q ?? args?.query ?? '') as string
           const useLLM = (args?.llm === true || args?.llm === 'true')
           const result = useLLM
-            ? await context.queryWithLLM(q, config.llmUrl, config.llmModel, config.llmApiKey)
+            ? await context.queryWithLLM(q, [], config.llmUrl, config.llmModel, config.llmApiKey)
             : await context.searchContext(q)
           res.json({ tool, result })
           break

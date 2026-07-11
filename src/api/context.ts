@@ -33,7 +33,7 @@ export class ContextService {
     return { query: cleanQuery, memories: results, answer: undefined }
   }
 
-  async queryWithLLM(query: string, llmUrl?: string, llmModel?: string, llmApiKey?: string, timezoneOffset = 0): Promise<QueryResult> {
+  async queryWithLLM(query: string, history: { role: string; text: string }[], llmUrl?: string, llmModel?: string, llmApiKey?: string, timezoneOffset = 0): Promise<QueryResult> {
     const { startDate, endDate, cleanQuery } = parseTimeRange(query, timezoneOffset)
 
     // Strip trailing punctuation from query terms
@@ -132,7 +132,7 @@ First, give a friendly, direct, and concise one-sentence answer (under 30 words)
 
 Relevant activity:
 ${items || '(no matching events found)'}`
-      answer = await this.callLLM(systemPrompt, userPrompt, llmUrl, llmModel, llmApiKey)
+      answer = await this.callLLM(systemPrompt, userPrompt, history, llmUrl, llmModel, llmApiKey)
     }
 
     if (!answer) {
@@ -141,12 +141,13 @@ ${items || '(no matching events found)'}`
     return { query, memories: vectorResults, answer }
   }
 
-  async chat(query: string, llmUrl?: string, llmModel?: string, llmApiKey?: string): Promise<QueryResult> {
+  async chat(query: string, history: { role: string; text: string }[], llmUrl?: string, llmModel?: string, llmApiKey?: string): Promise<QueryResult> {
     let answer: string | undefined
     if (llmUrl && llmModel) {
       answer = await this.callLLM(
         'You are a helpful, friendly AI assistant. Answer the user\'s question conversationally and naturally.',
         query,
+        history,
         llmUrl,
         llmModel,
         llmApiKey,
@@ -389,7 +390,7 @@ ${events.slice(0, 60).map(e => `[${e.source}] ${e.content}${e.metadata.app ? ` (
     if (raw) {
       const systemPrompt = 'You are an AI assistant analyzing the user\'s computer activity log.'
       const userPrompt = query
-      return this.callLLM(systemPrompt, userPrompt, llmUrl, llmModel, llmApiKey, signal)
+      return this.callLLM(systemPrompt, userPrompt, [], llmUrl, llmModel, llmApiKey, signal)
     }
 
     const items: string[] = []
@@ -416,12 +417,13 @@ First, give a friendly, direct, and concise one-sentence answer (under 30 words)
 Recent activity:
 ${context}`
 
-    return this.callLLM(systemPrompt, userPrompt, llmUrl, llmModel, llmApiKey, signal)
+    return this.callLLM(systemPrompt, userPrompt, [], llmUrl, llmModel, llmApiKey, signal)
   }
 
   private async callLLM(
     systemPrompt: string,
     userPrompt: string,
+    history: { role: string; text: string }[],
     llmUrl: string,
     llmModel: string,
     llmApiKey?: string,
@@ -431,15 +433,25 @@ ${context}`
       const headers: Record<string, string> = { 'Content-Type': 'application/json' }
       if (llmApiKey) headers['Authorization'] = `Bearer ${llmApiKey}`
 
+      const messages: { role: string; content: string }[] = [
+        { role: 'system', content: systemPrompt }
+      ]
+
+      for (const h of history) {
+        messages.push({
+          role: h.role === 'ai' ? 'assistant' : 'user',
+          content: h.text,
+        })
+      }
+
+      messages.push({ role: 'user', content: userPrompt })
+
       const res = await fetch(`${llmUrl}/chat/completions`, {
         method: 'POST',
         headers,
         body: JSON.stringify({
           model: llmModel,
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: userPrompt },
-          ],
+          messages,
           stream: false,
         }),
         signal: signal ?? AbortSignal.timeout(60000),

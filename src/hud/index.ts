@@ -38,7 +38,7 @@ export function createHudServer(config: Config, supermemory: SupermemoryClient):
       if (!q) { res.status(400).json({ error: 'q required' }); return }
       const useLLM = req.query.llm === 'true'
       res.json(useLLM
-        ? await context.queryWithLLM(q, config.llmUrl, config.llmModel, config.llmApiKey)
+        ? await context.queryWithLLM(q, [], config.llmUrl, config.llmModel, config.llmApiKey)
         : await context.searchContext(q))
     } catch (err) { res.status(500).json({ error: String(err) }) }
   })

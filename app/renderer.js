@@ -4,6 +4,7 @@ let username = 'there'
 let activeEvents = []
 let selectedIndex = -1
 let chatMode = false
+let aiMode = false
 let activeConv = null
 let iconDataUrl = null
 
@@ -19,7 +20,7 @@ const events = document.getElementById('events')
 const eventsEmpty = document.getElementById('events-empty')
 const convSection = document.getElementById('convs-section')
 const convList = document.getElementById('conv-list')
-const chat = document.getElementById('chat')
+const searchRow = document.getElementById('search-row')
 
 window.trace.getIcon().then(url => {
   if (url) {
@@ -292,7 +293,11 @@ input.addEventListener('keydown', (e) => {
   }
   if (e.key === 'Tab') {
     e.preventDefault()
-    sendMessage()
+    aiMode = !aiMode
+    searchRow.classList.toggle('ai-mode', aiMode)
+    input.placeholder = aiMode ? 'Ask anything...' : "Ask what you've been doing..."
+    input.focus()
+    return
   }
   if (e.key === 'Enter' && !e.shiftKey) {
     e.preventDefault()
@@ -370,7 +375,8 @@ async function sendMessage() {
   }
 
   try {
-    const data = await window.trace.api('GET', `/context/query?q=${encodeURIComponent(q)}&llm=true`)
+    const endpoint = aiMode ? '/context/chat' : '/context/query'
+    const data = await window.trace.api('GET', `${endpoint}?q=${encodeURIComponent(q)}${aiMode ? '' : '&llm=true'}`)
     if (data?.answer) {
       addAiMsg(data.answer, data.memories ?? [])
     } else if (data?.memories?.length) {

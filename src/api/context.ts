@@ -52,6 +52,20 @@ export class ContextService {
     return { query, memories: results, answer }
   }
 
+  async chat(query: string, llmUrl?: string, llmModel?: string, llmApiKey?: string): Promise<QueryResult> {
+    let answer: string | undefined
+    if (llmUrl && llmModel) {
+      answer = await this.callLLM(
+        'You are a helpful, friendly AI assistant. Answer the user\'s question conversationally and naturally.',
+        query,
+        llmUrl,
+        llmModel,
+        llmApiKey,
+      )
+    }
+    return { query, memories: [], answer }
+  }
+
   async getDayContext(dateStr: string): Promise<DayContext> {
     const docs = await this.client.listDocuments(200)
     const dayDocs = docs.filter(d => {

@@ -34,6 +34,17 @@ export function createApi(config: Config, supermemory: SupermemoryClient, daemon
     }
   })
 
+  app.get('/context/chat', async (req: Request, res: Response) => {
+    try {
+      const q = (req.query.q as string) ?? ''
+      if (!q) { res.status(400).json({ error: 'q required' }); return }
+      const result = await context.chat(q, config.llmUrl, config.llmModel, config.llmApiKey)
+      res.json(result)
+    } catch (err) {
+      res.status(500).json({ error: String(err) })
+    }
+  })
+
   app.get('/context/summary', async (_req: Request, res: Response) => {
     try {
       const result = await context.getSummary()

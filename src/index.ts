@@ -37,7 +37,8 @@ async function main(): Promise<void> {
   api.listen(config.apiPort, () => {
     logger.info(`context API at http://localhost:${config.apiPort}`)
     logger.info(`  GET  /context/current   — what you are doing now`)
-    logger.info(`  GET  /context/query?q=   — search your memories (?llm=true for Q&A)`)
+    logger.info(`  GET  /context/chat?q=       — free-form AI chat (no activity context)`)
+    logger.info(`  GET  /context/query?q=       — search your memories (?llm=true for Q&A)`)
     logger.info(`  GET  /context/day?date=  — daily summary`)
     logger.info(`  POST /mcp                — MCP tool integration`)
     logger.info(`  GET  /mcp/tools           — list available MCP tools`)

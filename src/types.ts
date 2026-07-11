@@ -36,6 +36,11 @@ export interface EventMetadata {
   tags?: string[]
   shell?: string
   exitCode?: number
+  artist?: string
+  song?: string
+  searchEngine?: string
+  searchQuery?: string
+  resultType?: 'search' | 'product' | 'article'
   [key: string]: unknown
 }
 
@@ -79,6 +84,7 @@ export interface QueryResult {
   query: string
   memories: SupermemoryMemory[]
   answer?: string
+  kwCount?: number
 }
 
 export interface MCPToolRequest {

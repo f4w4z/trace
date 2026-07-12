@@ -244,12 +244,30 @@ if (-not (Test-Path $envFile)) {
 if (-not $SkipWSL) {
     Write-Step 6 $total "WSL + Ubuntu"
     $wslInstalled = $false
+
+    # Method 1: check if WSL optional feature is enabled
     try {
-        $wslList = wsl --list --quiet 2>$null
-        if ($wslList -and ($wslList | Where-Object { $_ -match "Ubuntu" })) {
+        $feature = Get-WindowsOptionalFeature -Online -FeatureName "Microsoft-Windows-Subsystem-Linux" -ErrorAction SilentlyContinue
+        if ($feature -and $feature.State -eq "Enabled") {
             $wslInstalled = $true
         }
     } catch {}
+
+    # Method 2: check if ubuntu.exe exists on PATH
+    if (-not $wslInstalled) {
+        $ubuntu = Get-Command ubuntu.exe -ErrorAction SilentlyContinue
+        if ($ubuntu) { $wslInstalled = $true }
+    }
+
+    # Method 3: try wsl --list
+    if (-not $wslInstalled) {
+        try {
+            $wslList = wsl --list --quiet 2>$null
+            if ($wslList -and ($wslList | Where-Object { $_ -match "Ubuntu" })) {
+                $wslInstalled = $true
+            }
+        } catch {}
+    }
 
     $wslNeedsReboot = $false
     if ($wslInstalled) {

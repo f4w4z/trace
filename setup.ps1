@@ -145,7 +145,7 @@ if (-not (Test-Path $nodeModules)) {
 if ($needsInstall -or $Force) {
     Write-Status "Running npm install..."
     Push-Location $Root
-    npm install 2>$null | Out-Null
+    & { npm install 2>$null } 2>$null | Out-Null
     Pop-Location
     $modCount = (Get-ChildItem $nodeModules -Directory | Measure-Object).Count
     Write-Installed "$modCount packages installed"
@@ -172,7 +172,7 @@ if (-not $SkipBuild) {
     if ($needsBuild -or $Force) {
         Write-Status "Compiling..."
         Push-Location $Root
-        npm run build 2>$null | Out-Null
+        & { npm run build 2>$null } 2>$null | Out-Null
         Pop-Location
         Write-Installed "TypeScript compiled"
     } else {

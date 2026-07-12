@@ -77,6 +77,40 @@ function Write-Status {
     Write-Host "    ${Dim}$msg${Reset}"
 }
 
+# Runs a scriptblock in a background job, shows an animated progress bar,
+# and returns the result. Works on PS 5.1+.
+function Invoke-WithProgress {
+    param(
+        [string]$Activity,
+        [scriptblock]$Code
+    )
+    $job = Start-Job -ScriptBlock $Code
+    $spinChars = @([char]0x2502, [char]0x2571, [char]0x2500, [char]0x2572, [char]0x2502, [char]0x2571, [char]0x2500, [char]0x2572)
+    $i = 0
+    $width = 30
+    $filled = $ESC[48;2;0;200;120m
+    $empty  = $ESC[48;2;50;50;55m
+    $barReset = $ESC[0m
+
+    while ($job.State -eq 'Running') {
+        $pct = ($i % 100)
+        $filledLen = [math]::Floor($pct / 100 * $width)
+        $emptyLen  = $width - $filledLen
+        $bar = "$filled$(" " * $filledLen)$barReset$empty$(" " * $emptyLen)$barReset"
+        $spin = $spinChars[$i % $spinChars.Length]
+        Write-Host "`r    $Cyan$spin${Reset}  $bar  ${Dim}$pct%${Reset}  " -NoNewline
+        $i += 3
+        Start-Sleep -Milliseconds 80
+    }
+
+    $result = Receive-Job -Job $job -ErrorAction SilentlyContinue
+    Remove-Job -Job $job -Force -ErrorAction SilentlyContinue
+
+    $bar = "$filled$(" " * $width)$barReset"
+    Write-Host "`r    ${Green}[done]${Reset}  $bar  ${Dim}100%${Reset}       "
+    return $result
+}
+
 # --- Admin check -----------------------------------------------------------
 $isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 if (-not $isAdmin) {
@@ -99,7 +133,7 @@ if ($git) {
     Write-OK "Already installed ${Bold}v$gitVer${Reset}"
 } else {
     Write-Status "Installing via winget..."
-    winget install Git.Git --accept-package-agreements --accept-source-agreements 2>$null | Out-Null
+    Invoke-WithProgress "Git" { winget install Git.Git --accept-package-agreements --accept-source-agreements 2>$null } | Out-Null
     $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
     Write-Installed "Git installed"
 }
@@ -114,13 +148,13 @@ if ($node -and -not $Force) {
     } else {
         Write-Warn "v$ver is too old (need >=20)"
         Write-Status "Upgrading to LTS..."
-        winget install OpenJS.NodeJS.LTS --accept-package-agreements --accept-source-agreements 2>$null | Out-Null
+        Invoke-WithProgress "Node.js" { winget install OpenJS.NodeJS.LTS --accept-package-agreements --accept-source-agreements 2>$null } | Out-Null
         $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
         Write-Installed "Node.js upgraded to LTS"
     }
 } elseif (-not $node) {
     Write-Status "Not found. Installing via winget..."
-    winget install OpenJS.NodeJS.LTS --accept-package-agreements --accept-source-agreements 2>$null | Out-Null
+    Invoke-WithProgress "Node.js" { winget install OpenJS.NodeJS.LTS --accept-package-agreements --accept-source-agreements 2>$null } | Out-Null
     $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
     Write-Installed "Node.js installed"
 } else {
@@ -145,7 +179,7 @@ if (-not (Test-Path $nodeModules)) {
 if ($needsInstall -or $Force) {
     Write-Status "Running npm install..."
     Push-Location $Root
-    cmd /c "npm install 2>nul" | Out-Null
+    Invoke-WithProgress "npm install" { cmd /c "npm install 2>nul" } | Out-Null
     Pop-Location
     $modCount = (Get-ChildItem $nodeModules -Directory | Measure-Object).Count
     Write-Installed "$modCount packages installed"
@@ -172,7 +206,7 @@ if (-not $SkipBuild) {
     if ($needsBuild -or $Force) {
         Write-Status "Compiling..."
         Push-Location $Root
-        cmd /c "npm run build 2>nul" | Out-Null
+        Invoke-WithProgress "tsc" { cmd /c "npm run build 2>nul" } | Out-Null
         Pop-Location
         Write-Installed "TypeScript compiled"
     } else {
@@ -222,7 +256,7 @@ if (-not $SkipWSL) {
         Write-OK "Ubuntu is installed"
     } else {
         Write-Status "Installing WSL + Ubuntu..."
-        wsl --install --distribution Ubuntu --no-launch 2>$null | Out-Null
+        Invoke-WithProgress "WSL" { wsl --install --distribution Ubuntu --no-launch 2>$null } | Out-Null
         $wslNeedsReboot = $true
         $NeedsReboot = $true
         Write-Installed "WSL + Ubuntu installed"
@@ -254,13 +288,14 @@ if (-not $SkipWSL) {
             if ($smBinary -and -not $Force) {
                 Write-OK "Already installed"
             } else {
-                Write-Status "Downloading..."
                 $installOk = $false
-                try {
+                $result = Invoke-WithProgress "Supermemory" {
                     $smScript = "set -e; mkdir -p /root/.supermemory; cd /root/.supermemory; curl -fsSL https://github.com/supermemoryai/supermemory/releases/latest/download/supermemory-linux-amd64.tar.gz -o sm.tar.gz; tar xzf sm.tar.gz --strip-components=0 -C /root/.supermemory; rm -f sm.tar.gz; chmod +x /root/.supermemory/bin/supermemory-server"
-                    wsl -d Ubuntu -u root -- bash -c $smScript 2>$null | Out-Null
+                    wsl -d Ubuntu -u root -- bash -c $smScript 2>$null
+                }
+                if ($LASTEXITCODE -eq 0) {
                     $installOk = $true
-                } catch {}
+                }
 
                 if ($installOk) {
                     Write-Installed "Supermemory Local installed"

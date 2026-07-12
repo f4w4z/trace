@@ -64,6 +64,16 @@ function killPort(port) {
   })
 }
 
+let wslIp = ''
+
+const WSL_DISTRO = 'trace-vm'
+const VM_DIR = isPackaged
+  ? path.join('C:\\ProgramData', 'Trace', 'vm')
+  : path.join(os.homedir(), '.trace', 'vm')
+const TARBALL = isPackaged
+  ? path.join(process.resourcesPath, 'supermemory-ubuntu.tar.gz')
+  : path.join(__dirname, '..', 'build', 'supermemory-ubuntu.tar.gz')
+
 function execCommand(cmd, timeoutMs = 10000) {
   return new Promise((resolve) => {
     const proc = spawn('cmd', ['/c', cmd], { stdio: ['ignore', 'pipe', 'ignore'], windowsHide: true })
@@ -78,11 +88,75 @@ function execCommand(cmd, timeoutMs = 10000) {
   })
 }
 
-let wslIp = ''
+function execCommandLong(cmd, timeoutMs = 120000) {
+  return execCommand(cmd, timeoutMs)
+}
+
+async function isWslInstalled() {
+  try {
+    const feature = await execCommand('powershell -NoProfile -Command "Get-WindowsOptionalFeature -Online -FeatureName Microsoft-Windows-Subsystem-Linux | Select -Expand State"')
+    return feature === 'Enabled'
+  } catch { return false }
+}
+
+async function isDistroRegistered(name) {
+  const list = await execCommand('wsl -l -q')
+  if (!list) return false
+  return list.split(/\r?\n/).some(line => line.trim() === name)
+}
+
+async function importDistro(splashWindow) {
+  const update = (msg) => {
+    if (splashWindow && !splashWindow.isDestroyed()) {
+      splashWindow.webContents.send('status-update', { statusText: msg })
+    }
+  }
+
+  console.log(`wsl: importing ${WSL_DISTRO} from ${TARBALL}`)
+
+  // Ensure VM directory exists
+  if (!fs.existsSync(VM_DIR)) fs.mkdirSync(VM_DIR, { recursive: true })
+
+  // Remove old distro if it exists but is broken
+  await execCommand(`wsl --unregister ${WSL_DISTRO}`, 30000)
+
+  update('Importing Supermemory image (first time only)...')
+
+  // Import — this extracts the tarball into a new WSL distro
+  const result = await execCommandLong(
+    `wsl --import ${WSL_DISTRO} "${VM_DIR}" "${TARBALL}"`,
+    180000
+  )
+
+  console.log(`wsl: import result: ${result}`)
+
+  // Verify it worked
+  const registered = await isDistroRegistered(WSL_DISTRO)
+  if (!registered) {
+    throw new Error(`WSL import failed: ${result}`)
+  }
+
+  console.log(`wsl: ${WSL_DISTRO} imported successfully`)
+}
+
+async function startSupermemory(splashWindow) {
+  // Kill any existing instance
+  await execCommand(`wsl -d ${WSL_DISTRO} -u root -- pkill -9 -f supermemory-server`, 5000)
+
+  const logPath = isPackaged ? supermemoryLogPath : path.join(__dirname, '..', 'supermemory.log')
+  const wslLogPath = logPath.replace(/\\/g, '/')
+  // Convert Windows path to WSL mount path (C:\foo -> /mnt/c/foo)
+  const wslMountLog = wslLogPath.replace(/^([A-Za-z]):\//, (_, drive) => `/mnt/${drive.toLowerCase()}/`)
+
+  const cmd = `wsl -d ${WSL_DISTRO} -u root -- bash -c "export SUPERMEMORY_NO_PROMPT=1; export OPENAI_API_KEY=dummy; /root/.supermemory/bin/supermemory-server 2>&1 | tee ${wslMountLog}"`
+  spawn('cmd', ['/c', cmd], {
+    detached: true, stdio: 'ignore', windowsHide: true,
+  }).unref()
+}
 
 async function detectWslIp() {
   for (let i = 0; i < 10; i++) {
-    const ip = await execCommand('wsl -d Ubuntu hostname -I')
+    const ip = await execCommand(`wsl -d ${WSL_DISTRO} hostname -I`)
     if (ip) { wslIp = ip; console.log(`wsl: detected IP ${wslIp}`); return wslIp }
     await new Promise(r => setTimeout(r, 2000))
   }
@@ -121,40 +195,65 @@ async function runServicesStartup(splashWindow) {
     }
   }
 
-  // 1. Port prep — Supermemory is killed by start.vbs before we launch
-  update({ env: 'active' }, 'Preparing network ports...', 10)
+  // 1. Port prep
+  update({ env: 'active' }, 'Preparing network ports...', 5)
   await killPort(6768)
   await new Promise(r => setTimeout(r, 500))
 
-  // 2. Detect WSL IP for direct connection (portproxy is broken)
+  // 2. Ensure WSL is installed
+  update({ env: 'active' }, 'Checking WSL...', 10)
+  const wslReady = await isWslInstalled()
+  if (!wslReady) {
+    update({ env: 'error' }, 'WSL not found. Please install WSL and restart.', 10)
+    return
+  }
+
+  // 3. Ensure the trace-vm distro is registered (auto-import on first run)
+  const hasDistro = await isDistroRegistered(WSL_DISTRO)
+  if (!hasDistro) {
+    try {
+      update({ env: 'active' }, 'Setting up Supermemory (first time — one moment)...', 15)
+      await importDistro(splashWindow)
+    } catch (err) {
+      console.error('wsl: import failed:', err.message)
+      update({ env: 'error' }, `WSL import failed: ${err.message}`, 15)
+      return
+    }
+  }
+  update({ env: 'done' }, 'WSL ready', 25)
+
+  // 4. Detect WSL IP for direct connection
   if (!wslIp) await detectWslIp()
 
-  // 3. Wait for Supermemory (started by start.vbs, reachable via WSL IP)
-  update({ env: 'done', db: 'active' }, 'Starting Supermemory Local...', 40)
+  // 5. Start Supermemory inside the distro
+  update({ db: 'active' }, 'Starting Supermemory Local...', 40)
+  await startSupermemory(splashWindow)
+
+  // 6. Wait for Supermemory to be reachable
   const logInterval = pollSupermemoryLogs(splashWindow)
   const dbUp = await waitForSupermemory()
   clearInterval(logInterval)
-  // Send final logs
   const finalLogs = readLastLogLines()
   if (finalLogs && splashWindow && !splashWindow.isDestroyed()) {
     splashWindow.webContents.send('status-update', { logs: finalLogs })
   }
+
   if (dbUp) {
-    update({ env: 'done', db: 'done', daemon: 'active' }, 'Starting context daemon...', 70)
+    update({ db: 'done', daemon: 'active' }, 'Starting context daemon...', 70)
   } else {
-    update({ env: 'done', db: 'error', daemon: 'active' }, 'Supermemory unavailable. Starting degraded...', 70)
+    update({ db: 'error', daemon: 'active' }, 'Supermemory unavailable. Starting degraded...', 70)
   }
 
-  // 3. Start backend daemon
+  // 7. Start backend daemon
   const currentSettings = loadSettings()
   const needsOnboarding = !currentSettings || !currentSettings.onboarded || !currentSettings.name
   const readyMsg = needsOnboarding ? 'Starting onboarding wizard...' : 'Trace is active in tray! Press Alt+X to search.'
 
   const daemonStarted = await ensureServer()
   if (daemonStarted) {
-    update({ env: 'done', db: dbUp ? 'done' : 'error', daemon: 'done' }, readyMsg, 100)
+    update({ db: dbUp ? 'done' : 'error', daemon: 'done' }, readyMsg, 100)
   } else {
-    update({ env: 'done', db: dbUp ? 'done' : 'error', daemon: 'error' }, 'Trace daemon failed to start.', 100)
+    update({ db: dbUp ? 'done' : 'error', daemon: 'error' }, 'Trace daemon failed to start.', 100)
   }
 
   await new Promise(r => setTimeout(r, 1500))
@@ -602,7 +701,7 @@ app.whenReady().then(async () => {
         spawn('cmd', ['/c', 'for /f "tokens=5" %a in (\'netstat -ano ^| findstr ":6768 "\') do taskkill /f /pid %a'], {
           detached: true, stdio: 'ignore', windowsHide: true,
         }).unref()
-        spawn('wsl', ['-d', 'Ubuntu', '-u', 'root', 'pkill', '-f', 'supermemory'], {
+        spawn('wsl', ['-d', WSL_DISTRO, '-u', 'root', 'pkill', '-f', 'supermemory'], {
           detached: true, stdio: 'ignore', windowsHide: true,
         }).unref()
         setTimeout(() => {

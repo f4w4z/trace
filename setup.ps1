@@ -242,7 +242,7 @@ if (-not (Test-Path $envFile)) {
 
 # --- 6. WSL ----------------------------------------------------------------
 if (-not $SkipWSL) {
-    Write-Step 6 $total "WSL + Ubuntu"
+    Write-Step 6 $total "WSL"
     $wslInstalled = $false
 
     # Method 1: check if WSL optional feature is enabled
@@ -271,69 +271,23 @@ if (-not $SkipWSL) {
 
     $wslNeedsReboot = $false
     if ($wslInstalled) {
-        Write-OK "Ubuntu is installed"
+        Write-OK "WSL is installed"
     } else {
-        Write-Status "Installing WSL + Ubuntu..."
+        Write-Status "Installing WSL..."
         Invoke-WithProgress "WSL" { wsl --install --distribution Ubuntu --no-launch 2>$null } | Out-Null
         $wslNeedsReboot = $true
         $NeedsReboot = $true
-        Write-Installed "WSL + Ubuntu installed"
+        Write-Installed "WSL installed"
         Write-Warn "Reboot required to finish WSL setup"
     }
 
-    # --- 7. Supermemory ----------------------------------------------------
-    if (-not $SkipSupermemory) {
-        Write-Step 7 $total "Supermemory Local"
-
-        $wslReady = $false
-        if (-not $wslNeedsReboot) {
-            try {
-                $testRun = wsl -d Ubuntu -- echo ok 2>$null
-                if ($testRun -match "ok") { $wslReady = $true }
-            } catch {}
-        }
-
-        if (-not $wslReady) {
-            Write-Skipped "Pending - WSL needs reboot first"
-        } else {
-            $smBinary = $false
-            try {
-                $smCmd = 'test -f /root/.supermemory/bin/supermemory-server && echo ok'
-                $smCheck = wsl -d Ubuntu -- bash -c $smCmd 2>$null
-                if ($smCheck -match "ok") { $smBinary = $true }
-            } catch {}
-
-            if ($smBinary -and -not $Force) {
-                Write-OK "Already installed"
-            } else {
-                $installOk = $false
-                $result = Invoke-WithProgress "Supermemory" {
-                    $smScript = "set -e; mkdir -p /root/.supermemory; cd /root/.supermemory; curl -fsSL https://github.com/supermemoryai/supermemory/releases/latest/download/supermemory-linux-amd64.tar.gz -o sm.tar.gz; tar xzf sm.tar.gz --strip-components=0 -C /root/.supermemory; rm -f sm.tar.gz; chmod +x /root/.supermemory/bin/supermemory-server"
-                    wsl -d Ubuntu -u root -- bash -c $smScript 2>$null
-                }
-                if ($LASTEXITCODE -eq 0) {
-                    $installOk = $true
-                }
-
-                if ($installOk) {
-                    Write-Installed "Supermemory Local installed"
-                } else {
-                    Write-Warn "Install failed - will retry after reboot"
-                }
-            }
-
-            if ($smBinary -or $installOk) {
-                wsl -d Ubuntu -u root -- bash -c "mkdir -p /root/.supermemory/data" 2>$null | Out-Null
-            }
-        }
+    if (-not $wslNeedsReboot) {
+        Write-Host ""
+        Write-Host "    ${Dim}Supermemory is auto-imported on first launch by the app.${Reset}"
     }
 } else {
-    Write-Step 6 $total "WSL + Ubuntu"
+    Write-Step 6 $total "WSL"
     Write-Skipped "Skipped (-SkipWSL)"
-    if (-not $SkipSupermemory) {
-        Write-Step 7 $total "Supermemory Local"
-        Write-Skipped "Skipped (-SkipWSL)"
-    }
 }
 
 # --- 8. Firewall -----------------------------------------------------------
@@ -378,17 +332,14 @@ if ($NeedsReboot) {
     Write-Host "  ${Dim}  - Installed Git, Node.js, and dependencies${Reset}"
     Write-Host "  ${Dim}  - Built the project${Reset}"
     Write-Host "  ${Dim}  - Created .env config${Reset}"
-    Write-Host "  ${Dim}  - Installed WSL + Ubuntu (pending reboot)${Reset}"
+    Write-Host "  ${Dim}  - Installed WSL (pending reboot)${Reset}"
     Write-Host ""
     Write-Host "  ${Bold}${Yellow}Next steps:${Reset}"
     Write-Host ""
     Write-Host "    ${Bold}1.${Reset} ${Bold}Reboot your PC now${Reset}"
-    Write-Host "    ${Bold}2.${Reset} After reboot, ${Bold}open Ubuntu once${Reset} from the Start menu"
-    Write-Host "       to set your UNIX username and password"
-    Write-Host "    ${Bold}3.${Reset} Run ${Bold}setup.bat${Reset} again - it will:"
-    Write-Host "       ${Dim}- Skip everything already done (< 5 seconds)${Reset}"
-    Write-Host "       ${Dim}- Install Supermemory Local in WSL${Reset}"
-    Write-Host "       ${Dim}- Finish the remaining setup${Reset}"
+    Write-Host "    ${Bold}2.${Reset} After reboot, run ${Bold}setup.bat${Reset} again (takes <5s)"
+    Write-Host "    ${Bold}3.${Reset} Launch with ${Bold}start.vbs${Reset} or ${Bold}npm run app${Reset}"
+    Write-Host "       Supermemory is auto-imported on first launch."
     Write-Host ""
 } else {
     Write-Host "  ${Green}${Bold}Setup complete!${Reset}"

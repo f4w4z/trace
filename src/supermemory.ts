@@ -75,17 +75,32 @@ export class SupermemoryClient {
     }
   }
 
+  private flattenMetadata(raw: Record<string, unknown>): Record<string, string | number | boolean | string[]> {
+    const out: Record<string, string | number | boolean | string[]> = {}
+    for (const [k, v] of Object.entries(raw)) {
+      if (v == null) continue
+      if (typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean') {
+        out[k] = v
+      } else if (Array.isArray(v) && v.every(i => typeof i === 'string')) {
+        out[k] = v as string[]
+      } else {
+        out[k] = JSON.stringify(v)
+      }
+    }
+    return out
+  }
+
   private async postWithRetry(event: Event, retries = 3): Promise<string | null> {
     const body: Record<string, unknown> = {
       content: event.content,
       containerTag: this.containerTag,
-      metadata: {
+      metadata: this.flattenMetadata({
         ...event.metadata,
         source: event.source,
         eventType: event.type,
         eventId: event.id,
         rawTimestamp: event.timestamp.toISOString(),
-      },
+      }),
       taskType: 'memory',
     }
     for (let i = 0; i < retries; i++) {
@@ -96,7 +111,8 @@ export class SupermemoryClient {
           body: JSON.stringify(body),
         })
         if (res.ok) return event.id ?? 'remote-ok'
-        logger.warn(`POST /v3/documents returned ${res.status} (attempt ${i + 1})`)
+        const errBody = await res.text().catch(() => '')
+        logger.warn(`POST /v3/documents returned ${res.status} (attempt ${i + 1}): ${errBody}`)
         this.remoteOk = false
       } catch (err) {
         logger.warn(`supermemory unreachable (attempt ${i + 1}/${retries}): ${err}`)
@@ -119,7 +135,11 @@ export class SupermemoryClient {
         headers: this.headers(),
         body: JSON.stringify(body),
       })
-      if (!res.ok) return null
+      if (!res.ok) {
+        const errBody = await res.text().catch(() => '')
+        logger.warn(`POST /v3/search returned ${res.status}: ${errBody}`)
+        return null
+      }
       const data = await res.json() as { results?: { documentId: string; title?: string; score: number; chunks: { content: string }[]; createdAt: string }[] }
       if (!data.results || data.results.length === 0) return null
       return data.results.map(r => ({

@@ -70,7 +70,7 @@ export class ContextService {
     // Expand search terms with common synonyms and platform keywords
     const expanded = new Set(words)
     for (const t of words) {
-      if (t === 'yt' || t === 'youtube' || t === 'video') {
+      if (t === 'yt' || t === 'youtube' || t === 'video' || t === 'videos') {
         expanded.add('yt')
         expanded.add('youtube')
       }
@@ -454,7 +454,7 @@ ${context}`
           messages,
           stream: false,
         }),
-        signal: signal ?? AbortSignal.timeout(60000),
+        signal: signal ?? AbortSignal.timeout(15000),
       })
       if (!res.ok) {
         logger.warn(`LLM returned ${res.status}`)

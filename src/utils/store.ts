@@ -111,7 +111,7 @@ export class LocalStore {
     // Expand search terms with common synonyms and platform keywords
     const expanded = new Set(terms)
     for (const t of terms) {
-      if (t === 'yt' || t === 'youtube' || t === 'video') {
+      if (t === 'yt' || t === 'youtube' || t === 'video' || t === 'videos') {
         expanded.add('yt')
         expanded.add('youtube')
       }

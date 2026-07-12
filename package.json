@@ -76,7 +76,8 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "Trace"
+      "shortcutName": "Trace",
+      "include": "installer.nsh"
     }
   }
 }

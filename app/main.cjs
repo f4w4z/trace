@@ -184,15 +184,28 @@ async function runServicesStartup(splashWindow) {
   update({ env: 'active' }, 'Checking WSL...', 10)
   const wslReady = await isWslInstalled()
   if (!wslReady) {
-    update({ env: 'error' }, 'WSL not found. Please install WSL and restart.', 10)
+    update({ env: 'error' }, 'WSL not enabled. Please reboot and try again.', 10)
+    if (splashWindow && !splashWindow.isDestroyed()) {
+      splashWindow.webContents.send('status-update', { action: 'restart-required' })
+    }
     return
   }
 
   // 3. Ensure Ubuntu distro exists
   const hasDistro = await isDistroRegistered(WSL_DISTRO)
   if (!hasDistro) {
-    update({ env: 'error' }, 'Ubuntu not found in WSL. Install it from Microsoft Store.', 10)
-    return
+    // WSL feature enabled but Ubuntu not yet registered — try installing it
+    update({ env: 'active' }, 'Installing Ubuntu in WSL (~200 MB)...', 15)
+    await execCommand('wsl --install --distribution Ubuntu --no-launch', 120000)
+    // Re-check
+    const hasDistroNow = await isDistroRegistered(WSL_DISTRO)
+    if (!hasDistroNow) {
+      update({ env: 'error' }, 'Could not install Ubuntu. A reboot may be required.', 15)
+      if (splashWindow && !splashWindow.isDestroyed()) {
+        splashWindow.webContents.send('status-update', { action: 'restart-required' })
+      }
+      return
+    }
   }
   update({ env: 'done' }, 'WSL ready', 25)
 

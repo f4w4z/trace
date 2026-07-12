@@ -1,33 +1,13 @@
 const { app, globalShortcut, BrowserWindow, Tray, Menu, nativeImage, screen, ipcMain, shell } = require('electron')
-const { spawn, fork } = require('child_process')
+const { spawn } = require('child_process')
 const path = require('path')
 const fs = require('fs')
 const os = require('os')
 const http = require('http')
 const net = require('net')
 
-const isPackaged = app.isPackaged
 const API_PORT = 6768
-
-// __dirname works in both dev and packaged (asar) — Electron patches fs for asar reads
 const SERVER_SCRIPT = path.join(__dirname, '..', 'dist', 'index.js').replace(/\\/g, '/')
-
-// Writable paths — logs and config go to userData in packaged mode
-const logDir = isPackaged ? app.getPath('userData') : path.join(__dirname, '..')
-const backendLogPath = path.join(logDir, 'backend.log')
-const supermemoryLogPath = path.join(logDir, 'supermemory.log')
-
-// In packaged mode, load .env from userData so user config persists across updates
-if (isPackaged) {
-  const userEnv = path.join(app.getPath('userData'), '.env')
-  if (!fs.existsSync(userEnv)) {
-    const bundledEnv = path.join(process.resourcesPath, '.env.example')
-    if (fs.existsSync(bundledEnv)) fs.copyFileSync(bundledEnv, userEnv)
-  }
-  if (fs.existsSync(userEnv)) {
-    require('dotenv').config({ path: userEnv })
-  }
-}
 
 let win = null
 let tray = null
@@ -64,11 +44,6 @@ function killPort(port) {
   })
 }
 
-let wslIp = ''
-
-const WSL_DISTRO = 'Ubuntu'
-const SM_BIN = '/root/.supermemory/bin/supermemory-server'
-
 function execCommand(cmd, timeoutMs = 10000) {
   return new Promise((resolve) => {
     const proc = spawn('cmd', ['/c', cmd], { stdio: ['ignore', 'pipe', 'ignore'], windowsHide: true })
@@ -83,73 +58,12 @@ function execCommand(cmd, timeoutMs = 10000) {
   })
 }
 
-async function detectWslIp() {
-  for (let i = 0; i < 10; i++) {
-    const ip = await execCommand(`wsl -d ${WSL_DISTRO} hostname -I`)
-    if (ip) { wslIp = ip; console.log(`wsl: detected IP ${wslIp}`); return wslIp }
-    await new Promise(r => setTimeout(r, 2000))
-  }
-  console.log('wsl: could not detect IP')
-  return ''
-}
-
-async function isWslInstalled() {
-  try {
-    const feature = await execCommand('powershell -NoProfile -Command "Get-WindowsOptionalFeature -Online -FeatureName Microsoft-Windows-Subsystem-Linux | Select -Expand State"')
-    return feature === 'Enabled'
-  } catch { return false }
-}
-
-async function isDistroRegistered(name) {
-  const list = await execCommand('wsl -l -q')
-  if (!list) return false
-  return list.split(/\r?\n/).some(line => line.trim() === name)
-}
-
-async function isSupermemoryInstalled() {
-  const result = await execCommand(`wsl -d ${WSL_DISTRO} -u root -- test -x ${SM_BIN} && echo ok`, 5000)
-  return result.includes('ok')
-}
-
-async function installSupermemory(splashWindow) {
-  const update = (msg) => {
-    if (splashWindow && !splashWindow.isDestroyed()) {
-      splashWindow.webContents.send('status-update', { statusText: msg })
-    }
-  }
-
-  update('Downloading Supermemory (~300 MB, one-time)...')
-  console.log('wsl: installing supermemory...')
-
-  const result = await execCommand(`wsl -d ${WSL_DISTRO} -u root -- bash -c "set -e; mkdir -p /root/.supermemory/bin /root/.supermemory/data; cd /root/.supermemory/bin; curl -fsSL https://github.com/supermemoryai/supermemory/releases/download/server-v0.0.5/supermemory-server-linux-x64 -o supermemory-server; chmod +x supermemory-server; echo ok"`, 300000)
-
-  if (!result.includes('ok')) {
-    throw new Error(`Supermemory install failed: ${result}`)
-  }
-
-  console.log('wsl: supermemory installed')
-}
-
-async function startSupermemory(splashWindow) {
-  // Kill any existing instance
-  await execCommand(`wsl -d ${WSL_DISTRO} -u root -- pkill -9 -f supermemory-server`, 5000)
-
-  const logPath = isPackaged ? supermemoryLogPath : path.join(__dirname, '..', 'supermemory.log')
-  const wslLogPath = logPath.replace(/\\/g, '/')
-  const wslMountLog = wslLogPath.replace(/^([A-Za-z]):\//, (_, drive) => `/mnt/${drive.toLowerCase()}/`)
-
-  const cmd = `wsl -d ${WSL_DISTRO} -u root -- bash -c "export SUPERMEMORY_NO_PROMPT=1; export OPENAI_API_KEY=dummy; ${SM_BIN} 2>&1 | tee ${wslMountLog}"`
-  spawn('cmd', ['/c', cmd], {
-    detached: true, stdio: 'ignore', windowsHide: true,
-  }).unref()
-}
-
 async function waitForSupermemory() {
   // 120 iterations × 500ms = 60s timeout (first boot can be slow)
   return new Promise(async (resolve) => {
     for (let i = 0; i < 120; i++) {
       await new Promise(r => setTimeout(r, 500))
-      if (await checkPortOpen(6767, wslIp || '127.0.0.1')) { resolve(true); return }
+      if (await checkPortOpen(6767)) { resolve(true); return }
     }
     resolve(false)
   })
@@ -175,84 +89,37 @@ async function runServicesStartup(splashWindow) {
     }
   }
 
-  // 1. Port prep
-  update({ env: 'active' }, 'Preparing network ports...', 5)
+  // 1. Port prep — Supermemory is killed by start.vbs before we launch
+  update({ env: 'active' }, 'Preparing network ports...', 10)
   await killPort(6768)
   await new Promise(r => setTimeout(r, 500))
 
-  // 2. Ensure WSL is installed
-  update({ env: 'active' }, 'Checking WSL...', 10)
-  const wslReady = await isWslInstalled()
-  if (!wslReady) {
-    update({ env: 'error' }, 'WSL not enabled. Please reboot and try again.', 10)
-    if (splashWindow && !splashWindow.isDestroyed()) {
-      splashWindow.webContents.send('status-update', { action: 'restart-required' })
-    }
-    return
-  }
-
-  // 3. Ensure Ubuntu distro exists
-  const hasDistro = await isDistroRegistered(WSL_DISTRO)
-  if (!hasDistro) {
-    // WSL feature enabled but Ubuntu not yet registered — try installing it
-    update({ env: 'active' }, 'Installing Ubuntu in WSL (~200 MB)...', 15)
-    await execCommand('wsl --install --distribution Ubuntu --no-launch', 120000)
-    // Re-check
-    const hasDistroNow = await isDistroRegistered(WSL_DISTRO)
-    if (!hasDistroNow) {
-      update({ env: 'error' }, 'Could not install Ubuntu. A reboot may be required.', 15)
-      if (splashWindow && !splashWindow.isDestroyed()) {
-        splashWindow.webContents.send('status-update', { action: 'restart-required' })
-      }
-      return
-    }
-  }
-  update({ env: 'done' }, 'WSL ready', 25)
-
-  // 4. Ensure Supermemory is installed (downloads ~300MB on first run)
-  const smReady = await isSupermemoryInstalled()
-  if (!smReady) {
-    try {
-      await installSupermemory(splashWindow)
-    } catch (err) {
-      console.error('wsl: supermemory install failed:', err.message)
-      update({ db: 'error' }, `Supermemory install failed: ${err.message}`, 30)
-      // Continue — app works in degraded mode
-    }
-  }
-
-  // 5. Detect WSL IP for direct connection
-  if (!wslIp) await detectWslIp()
-
-  // 6. Start Supermemory inside the distro
-  update({ db: 'active' }, 'Starting Supermemory Local...', 40)
-  await startSupermemory(splashWindow)
-
-  // 7. Wait for Supermemory to be reachable
+  // 2. Wait for Supermemory (started by start.vbs via Docker, reachable on localhost:6767)
+  update({ env: 'done', db: 'active' }, 'Starting Supermemory Local...', 40)
   const logInterval = pollSupermemoryLogs(splashWindow)
   const dbUp = await waitForSupermemory()
   clearInterval(logInterval)
+  // Send final logs
   const finalLogs = readLastLogLines()
   if (finalLogs && splashWindow && !splashWindow.isDestroyed()) {
     splashWindow.webContents.send('status-update', { logs: finalLogs })
   }
-
   if (dbUp) {
-    update({ db: 'done', daemon: 'active' }, 'Starting context daemon...', 70)
+    update({ env: 'done', db: 'done', daemon: 'active' }, 'Starting context daemon...', 70)
   } else {
-    update({ db: 'error', daemon: 'active' }, 'Supermemory unavailable. Starting degraded...', 70)
+    update({ env: 'done', db: 'error', daemon: 'active' }, 'Supermemory unavailable. Starting degraded...', 70)
   }
 
-  // 8. Start backend daemon
+  // 3. Start backend daemon
   const currentSettings = loadSettings()
   const needsOnboarding = !currentSettings || !currentSettings.onboarded || !currentSettings.name
   const readyMsg = needsOnboarding ? 'Starting onboarding wizard...' : 'Trace is active in tray! Press Alt+X to search.'
 
   const daemonStarted = await ensureServer()
   if (daemonStarted) {
-    update({ db: dbUp ? 'done' : 'error', daemon: 'done' }, readyMsg, 100)
+    update({ env: 'done', db: dbUp ? 'done' : 'error', daemon: 'done' }, readyMsg, 100)
   } else {
-    update({ db: dbUp ? 'done' : 'error', daemon: 'error' }, 'Trace daemon failed to start.', 100)
+    update({ env: 'done', db: dbUp ? 'done' : 'error', daemon: 'error' }, 'Trace daemon failed to start.', 100)
   }
 
   await new Promise(r => setTimeout(r, 1500))
@@ -260,7 +127,7 @@ async function runServicesStartup(splashWindow) {
 
 function readLastLogLines() {
   try {
-    const logPath = supermemoryLogPath
+    const logPath = path.join(__dirname, '..', 'supermemory.log')
     if (!fs.existsSync(logPath)) return ''
     const content = fs.readFileSync(logPath, 'utf8')
     const lines = content.split('\n')
@@ -325,40 +192,26 @@ async function ensureServer() {
   if (running) return true
   console.log('starting trace server...')
   
-  const env = { ...process.env, SUPERMEMORY_URL: wslIp ? `http://${wslIp}:6767` : undefined }
-
   try {
-    const logStream = fs.createWriteStream(backendLogPath, { flags: 'a' })
+    const logPath = path.join(__dirname, '..', 'backend.log')
+    const logStream = fs.createWriteStream(logPath, { flags: 'a' })
     
-    if (isPackaged) {
-      // In packaged app, fork() uses Electron's bundled Node.js runtime
-      serverProcess = fork(SERVER_SCRIPT, {
-        silent: true,
-        env,
-      })
-      serverProcess.stdout.pipe(logStream)
-      serverProcess.stderr.pipe(logStream)
-    } else {
-      serverProcess = spawn('node', [SERVER_SCRIPT], {
-        detached: false,
-        windowsHide: true,
-        env,
-      })
-      serverProcess.stdout.pipe(logStream)
-      serverProcess.stderr.pipe(logStream)
-    }
+    serverProcess = spawn('node', [SERVER_SCRIPT], {
+      detached: false,
+      windowsHide: true,
+      env: { ...process.env, SUPERMEMORY_URL: 'http://localhost:6767' },
+    })
+    
+    serverProcess.stdout.pipe(logStream)
+    serverProcess.stderr.pipe(logStream)
   } catch (err) {
     console.error('Failed to create backend.log write stream:', err.message)
-    if (isPackaged) {
-      serverProcess = fork(SERVER_SCRIPT, { silent: true, env })
-    } else {
-      serverProcess = spawn('node', [SERVER_SCRIPT], {
-        stdio: 'ignore',
-        detached: false,
-        windowsHide: true,
-        env,
-      })
-    }
+    serverProcess = spawn('node', [SERVER_SCRIPT], {
+      stdio: 'ignore',
+      detached: false,
+      windowsHide: true,
+      env: { ...process.env, SUPERMEMORY_URL: 'http://localhost:6767' },
+    })
   }
 
   // wait for it to be ready
@@ -554,7 +407,7 @@ app.whenReady().then(async () => {
   ipcMain.handle('get-username', () => process.env.USERNAME || 'there')
 
   ipcMain.handle('get-supermemory-status', async () => {
-    const online = await checkPortOpen(6767, wslIp || '127.0.0.1')
+    const online = await checkPortOpen(6767)
     if (online) {
       return { status: 'online' }
     } else {
@@ -672,16 +525,10 @@ app.whenReady().then(async () => {
   ipcMain.handle('exec-command', async (_, cmd) => {
     switch (cmd) {
       case 'restart': {
-        if (isPackaged) {
-          // In packaged mode, just relaunch the exe
-          app.relaunch()
-          app.quit()
-        } else {
-          spawn('wscript.exe', [path.join(__dirname, '..', 'start.vbs')], {
-            detached: true, stdio: 'ignore', windowsHide: true,
-          }).unref()
-          app.quit()
-        }
+        spawn('wscript.exe', [path.join(__dirname, '..', 'start.vbs')], {
+          detached: true, stdio: 'ignore', windowsHide: true,
+        }).unref()
+        app.quit()
         return 'Restarting...'
       }
       case 'restart-server': {
@@ -700,7 +547,7 @@ app.whenReady().then(async () => {
         spawn('cmd', ['/c', 'for /f "tokens=5" %a in (\'netstat -ano ^| findstr ":6768 "\') do taskkill /f /pid %a'], {
           detached: true, stdio: 'ignore', windowsHide: true,
         }).unref()
-        spawn('wsl', ['-d', WSL_DISTRO, '-u', 'root', 'pkill', '-f', 'supermemory'], {
+        spawn('cmd', ['/c', `cd /d "${path.join(__dirname, '..')}" && docker compose down`], {
           detached: true, stdio: 'ignore', windowsHide: true,
         }).unref()
         setTimeout(() => {
@@ -738,7 +585,7 @@ app.whenReady().then(async () => {
     })
   })
 
-  // Start background services (WSL, Supermemory, Node API Server)
+  // Start background services (Docker Supermemory, Node API Server)
   await runServicesStartup(splash)
 
   // Fade out and close the splash screen if visible

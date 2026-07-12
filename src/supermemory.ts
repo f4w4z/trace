@@ -152,19 +152,4 @@ export class SupermemoryClient {
       return null
     }
   }
-
-  async remoteList(limit: number): Promise<SupermemoryMemory[] | null> {
-    try {
-      const res = await fetch(`${this.baseUrl}/v3/documents/list`, {
-        method: 'POST',
-        headers: this.headers(),
-        body: JSON.stringify({ containerTag: this.containerTag, limit, sort: 'createdAt', order: 'desc' }),
-      })
-      if (!res.ok) return null
-      const data = await res.json() as { memories?: SupermemoryMemory[] }
-      return data.memories ?? []
-    } catch {
-      return null
-    }
-  }
 }

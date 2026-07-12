@@ -1,0 +1,16 @@
+services:
+  supermemory:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: trace-supermemory
+    ports:
+      - "6767:6767"
+    volumes:
+      - supermemory-data:/home/supermemory/data
+    env_file:
+      - .env.docker
+    restart: unless-stopped
+
+volumes:
+  supermemory-data:

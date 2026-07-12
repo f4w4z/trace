@@ -170,6 +170,7 @@ footer a { font-size: 12px; }
 <p class="desc">All endpoints return JSON. The server runs on port 6768.</p>
 <div class="endpoint">GET /context/current - active project, recent events, current session</div>
 <div class="endpoint">GET /context/query?q=...&llm=true - search memories with optional AI answer</div>
+<div class="endpoint">GET /context/chat?q=... - free-form AI chat (no activity context)</div>
 <div class="endpoint">GET /context/summary - LLM summary of last 2 hours of activity</div>
 <div class="endpoint">GET /context/day?date=2026-07-11 - full day with sessions grouped by project</div>
 <div class="endpoint">GET /health - service health and Supermemory status</div>
@@ -202,6 +203,7 @@ footer a { font-size: 12px; }
 <div class="section">
 <div class="section-label">Updates</div>
 <div class="timeline">
+<div class="entry"><div class="entry-date">Jul 13</div><div class="entry-desc"><strong>Code audit &amp; cleanup</strong> Removed dead code, deduplicated text/search helpers into shared modules used by both the server and the Electron UI, fixed <code>.gitignore</code> (release output, stale smt entries), and rewrote the README and landing page.</div></div>
 <div class="entry"><div class="entry-date">Jul 12</div><div class="entry-desc"><strong>Splash & lifecycle</strong> Boot splash screen with live startup progress (WSL detection, Supermemory status, daemon init). VBS scripts auto-elevate to admin and manage WSL Supermemory lifecycle directly. /stop kills Supermemory inside WSL. System app noise filtered from activity tracking. Supermemory metadata flattening fixes document ingestion. LLM query timeout reduced to 15s with graceful error handling.</div></div>
 <div class="entry"><div class="entry-date">Jul 11</div><div class="entry-desc"><strong>v0.1.0</strong> Renamed from smt to trace. Single-instance lock prevents duplicate launches. Local store scans all events for search. Supermemory uses v3/search with remoteOk flag. Chat-style overlay with logo in tray, search bar, spinner, HUD, and favicon. Comprehensive README and landing page.</div></div>
 <div class="entry"><div class="entry-date">Jul 11</div><div class="entry-desc"><strong>Chat AI</strong> Logo-based typing spinner. Escape returns to home view. LLM context includes recent events. Blur debounce at 300ms with focus cancellation. HUD with live event feed and session timeline.</div></div>

@@ -11,17 +11,19 @@ If Not WScript.Arguments.Named.Exists("elevated") Then
   WScript.Quit
 End If
 
-' Kill old electron and free ports
-WshShell.Run "taskkill /f /im electron.exe 2>nul", 0, True
+' Kill old electron and free ports (PowerShell Stop-Process works on elevated processes from elevated context)
+WshShell.Run "powershell -NoProfile -Command ""Stop-Process -Name electron -Force -ErrorAction SilentlyContinue""", 0, True
 WshShell.Run "cmd /c for /f ""tokens=5"" %a in ('netstat -ano ^| findstr "":6768 ""') do taskkill /f /pid %a 2>nul", 0, True
-' Kill old Supermemory inside WSL
-WshShell.Run "wsl -d Ubuntu -u root -- bash -c ""pkill -9 -f supermemory-server 2>/dev/null""", 0, True
+' Stop old Supermemory container (if running from previous WSL setup or Docker)
+WshShell.Run "docker stop trace-supermemory 2>nul", 0, True
+WshShell.Run "docker rm trace-supermemory 2>nul", 0, True
 WScript.Sleep 500
 
-' Start Supermemory silently in WSL
-wslLogPath = Replace(smt, "\", "/")
-wslLogPath = "/mnt/c" & Mid(wslLogPath, 3)
-WshShell.Run "wsl -d Ubuntu -u root bash -c ""cd /root && export SUPERMEMORY_NO_PROMPT=1 && export OPENAI_API_KEY=dummy && /root/.supermemory/bin/supermemory-server 2>&1 | tee " & wslLogPath & "/supermemory.log""", 0, False
+' Start Supermemory via Docker Compose
+WshShell.Run "cmd /c cd /d """ & smt & """ && docker compose up -d --build", 0, False
+WScript.Sleep 1000
+' Tail container logs to file for splash screen
+WshShell.Run "cmd /c cd /d """ & smt & """ && docker compose logs -f > supermemory.log 2>&1", 0, False
 
-' Launch Electron — main.cjs detects WSL IP and connects directly
+' Launch Electron — connects to Supermemory on localhost:6767
 WshShell.Run """" & smt & "\node_modules\electron\dist\electron.exe"" """ & smt & "\app\main.cjs""", 1, False

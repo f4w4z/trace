@@ -1,8 +1,10 @@
 node_modules/
 dist/
 release/
-.smt/
 .env
+.env.docker
+.env.local
 *.log
 .trace/
-start.vbs
+supermemory-data/
+.DS_Store

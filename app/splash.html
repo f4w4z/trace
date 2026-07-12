@@ -222,10 +222,6 @@
       if (data.steps.daemon) updateStep('step-daemon', data.steps.daemon);
     }
     
-    if (data.action === 'restart-required') {
-      document.getElementById('status').innerHTML = 'WSL requires a reboot. <a href="#" onclick="window.trace.hideWindow(); window.trace.execCommand(\'restart\')" style="color:rgba(255,255,255,0.6)">Restart now</a> or reboot manually and relaunch Trace.';
-    }
-
     if (data.action === 'close') {
       document.getElementById('container').classList.add('closing');
     }

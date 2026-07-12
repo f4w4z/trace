@@ -2,17 +2,14 @@ import type { SupermemoryClient } from '../supermemory.js'
 import type { CurrentContext, DayContext, Session, Event, QueryResult, SupermemoryMemory } from '../types.js'
 import { logger } from '../utils/logger.js'
 import { parseTimeRange } from '../utils/time.js'
+import { tokenizeQuery, expandSearchTerms } from '../utils/search.js'
+import { cleanTitle, getRelativeTime, findSpecificAnswer } from '../shared/text.js'
 
 export class ContextService {
   private client: SupermemoryClient
-  private daemonStop: (() => void) | null = null
 
   constructor(client: SupermemoryClient) {
     this.client = client
-  }
-
-  setDaemonStopper(fn: () => void): void {
-    this.daemonStop = fn
   }
 
   async getCurrentContext(): Promise<CurrentContext> {
@@ -58,32 +55,7 @@ export class ContextService {
 
     // Keyword extraction from cleaned query
     const seen = new Set(vectorResults.map(r => r.id))
-    const stopWords = new Set([
-      'what', 'were', 'when', 'where', 'that', 'this', 'there', 'with', 'have', 'been', 'your', 'about', 'tell', 'from',
-      'was', 'did', 'does', 'had', 'not', 'the', 'and', 'for', 'are', 'but', 'you', 'our', 'him', 'her', 'its', 'out',
-      'has', 'get', 'set', 'who', 'how', 'why', 'can', 'will', 'would', 'should', 'could', 'than', 'then', 'them',
-      'they', 'their', 'she', 'his', 'any', 'some', 'all', 'into', 'onto', 'over', 'under', 'here'
-    ])
-
-    const words = sanitized.toLowerCase().split(/\s+/).map(w => w.replace(/[^\w]/g, '')).filter(w => w.length >= 2 && !stopWords.has(w))
-
-    // Expand search terms with common synonyms and platform keywords
-    const expanded = new Set(words)
-    for (const t of words) {
-      if (t === 'yt' || t === 'youtube' || t === 'video' || t === 'videos') {
-        expanded.add('yt')
-        expanded.add('youtube')
-      }
-      if (t === 'spotify' || t === 'music' || t === 'song' || t === 'listening' || t === 'listen' || t === 'track' || t === 'playing') {
-        expanded.add('spotify')
-        expanded.add('media')
-        expanded.add('track_change')
-      }
-      if (t === 'netflix' || t === 'show' || t === 'movie' || t === 'watching' || t === 'watch') {
-        expanded.add('netflix')
-      }
-    }
-    const searchTerms = Array.from(expanded)
+    const searchTerms = expandSearchTerms(tokenizeQuery(cleanQuery))
 
     const kwMatches: SupermemoryMemory[] = []
     for (const word of searchTerms) {
@@ -222,7 +194,7 @@ ${events.slice(0, 60).map(e => `[${e.source}] ${e.content}${e.metadata.app ? ` (
     if (llmUrl && llmModel && llmApiKey) {
       try {
         const controller = new AbortController()
-        const timeout = setTimeout(() => controller.abort(), 20000)
+        const timeout = setTimeout(() => controller.abort(), 60000)
         text = await this.askLLM(prompt, [], llmUrl, llmModel, llmApiKey, true, controller.signal)
         clearTimeout(timeout)
       } catch { /* timeout or error — fall through to fallback */ }
@@ -240,7 +212,7 @@ ${events.slice(0, 60).map(e => `[${e.source}] ${e.content}${e.metadata.app ? ` (
       const seenPages = new Set<string>()
       for (const b of stats.browsers) {
         for (const t of b.titles) {
-          const clean = this.cleanTitle(t)
+          const clean = cleanTitle(t)
           if (clean && !seenPages.has(clean.toLowerCase())) {
             seenPages.add(clean.toLowerCase())
             uniquePages.push(clean)
@@ -261,11 +233,6 @@ ${events.slice(0, 60).map(e => `[${e.source}] ${e.content}${e.metadata.app ? ` (
 
     this.summaryCache = { text, stats, expiresAt: now + 5 * 60 * 1000 }
     return { text, stats, cached: false }
-  }
-
-  async getManagementStatus(): Promise<{ running: boolean; memoryCount: number; containerTag: string }> {
-    const docs = await this.client.listDocuments(1)
-    return { running: true, memoryCount: docs.length, containerTag: '' }
   }
 
   async clearAllMemories(): Promise<boolean> {
@@ -454,7 +421,7 @@ ${context}`
           messages,
           stream: false,
         }),
-        signal: signal ?? AbortSignal.timeout(15000),
+        signal: signal ?? AbortSignal.timeout(60000),
       })
       if (!res.ok) {
         logger.warn(`LLM returned ${res.status}`)
@@ -466,26 +433,6 @@ ${context}`
       logger.error(`LLM query failed: ${err}`)
       return ''
     }
-  }
-
-  private cleanTitle(text: string): string {
-    if (!text) return ''
-    let clean = text
-    // Remove process prefix like "msedge · " or "explorer · " or "Discord · "
-    clean = clean.replace(/^[a-zA-Z0-9_-]+\s+·\s+/, '')
-    // Remove browser and app suffixes
-    clean = clean.replace(/\s+and\s+\d+\s+more\s+page.*/gi, '')
-    clean = clean.replace(/\s*-\s*Zeny\s*-\s*Microsoft.*Edge/gi, '')
-    clean = clean.replace(/\s*-\s*Microsoft.*Edge/gi, '')
-    clean = clean.replace(/\s*-\s*Google Chrome/gi, '')
-    clean = clean.replace(/\s*-\s*Brave.*/gi, '')
-    clean = clean.replace(/\s*-\s*Vivaldi/gi, '')
-    clean = clean.replace(/\s*-\s*YouTube/gi, '')
-    clean = clean.replace(/\s*-\s*Netflix/gi, '')
-    clean = clean.replace(/\s*-\s*Discord/gi, '')
-    clean = clean.replace(/^\(\d+\)\s+/, '') // e.g. "(2) "
-    clean = clean.replace(/^Now playing:\s+/i, '')
-    return clean.trim()
   }
 
   private generateLocalAnswer(query: string, memories: SupermemoryMemory[]): string {
@@ -505,104 +452,19 @@ ${context}`
     for (const m of sorted) {
       const rawText = m.title ?? m.content ?? m.memory ?? m.chunk ?? ''
       if (!rawText) continue
-      const clean = this.cleanTitle(rawText).toLowerCase().trim()
+      const clean = cleanTitle(rawText).toLowerCase().trim()
       if (seen.has(clean)) continue
       seen.add(clean)
       unique.push(m)
     }
 
-    // Attempt to find a specific answer based on query terms
-    let specificAnswer = ''
-    const getRelativeTime = (createdAt?: string): string => {
-      if (!createdAt) return 'some time ago'
-      const diff = Date.now() - new Date(createdAt).getTime()
-      if (diff < 60000) return 'just now'
-      const m = Math.floor(diff / 60000)
-      if (m < 60) return `${m}m ago`
-      const h = Math.floor(m / 60)
-      if (h < 24) return `${h}h ago`
-      return new Date(createdAt).toLocaleDateString()
-    }
+    const specificAnswer = findSpecificAnswer(cleanQuery, unique)
 
     const ICONS: Record<string, string> = { filesystem: '📁', browser: '🌐', editor: '✏️', terminal: '💻', system: '⚙️', media: '🎵' }
 
-    if (cleanQuery.includes('youtube') || cleanQuery.includes('video') || cleanQuery.includes('watch')) {
-      const ytEvent = unique.find(m => {
-        const text = (m.title ?? m.content ?? m.memory ?? m.chunk ?? '').toLowerCase()
-        const url = String(m.metadata?.url ?? '').toLowerCase()
-        return text.includes('youtube') || url.includes('youtube.com') || url.includes('youtu.be')
-      })
-      if (ytEvent) {
-        const title = this.cleanTitle(ytEvent.title ?? ytEvent.content ?? ytEvent.memory ?? ytEvent.chunk ?? '')
-        specificAnswer = `The last YouTube video you watched was **${title}** (${getRelativeTime(ytEvent.createdAt)}).`
-      }
-    }
-
-    if (!specificAnswer && (cleanQuery.includes('song') || cleanQuery.includes('music') || cleanQuery.includes('spotify') || cleanQuery.includes('playing') || cleanQuery.includes('listen'))) {
-      const mediaEvent = unique.find(m => {
-        const text = (m.title ?? m.content ?? m.memory ?? m.chunk ?? '').toLowerCase()
-        const source = String(m.source ?? m.metadata?.source ?? '').toLowerCase()
-        return source === 'media' || text.includes('now playing') || text.includes('spotify')
-      })
-      if (mediaEvent) {
-        const title = this.cleanTitle(mediaEvent.title ?? mediaEvent.content ?? mediaEvent.memory ?? mediaEvent.chunk ?? '')
-        specificAnswer = `The last song you listened to was **${title}** (${getRelativeTime(mediaEvent.createdAt)}).`
-      }
-    }
-
-    if (!specificAnswer && (cleanQuery.includes('netflix') || cleanQuery.includes('movie') || cleanQuery.includes('show'))) {
-      const netflixEvent = unique.find(m => {
-        const text = (m.title ?? m.content ?? m.memory ?? m.chunk ?? '').toLowerCase()
-        const url = String(m.metadata?.url ?? '').toLowerCase()
-        return text.includes('netflix') || url.includes('netflix.com')
-      })
-      if (netflixEvent) {
-        const title = this.cleanTitle(netflixEvent.title ?? netflixEvent.content ?? netflixEvent.memory ?? netflixEvent.chunk ?? '')
-        specificAnswer = `The last Netflix page you visited was **${title}** (${getRelativeTime(netflixEvent.createdAt)}).`
-      }
-    }
-
-    if (!specificAnswer && (cleanQuery.includes('search') || cleanQuery.includes('google'))) {
-      const searchEvent = unique.find(m => {
-        const text = (m.title ?? m.content ?? m.memory ?? m.chunk ?? '').toLowerCase()
-        return text.includes('google search:') || text.includes('searchquery')
-      })
-      if (searchEvent) {
-        const title = this.cleanTitle(searchEvent.title ?? searchEvent.content ?? searchEvent.memory ?? searchEvent.chunk ?? '')
-        specificAnswer = `Your last search was for **${title}** (${getRelativeTime(searchEvent.createdAt)}).`
-      }
-    }
-
-    if (!specificAnswer && (cleanQuery.includes('discord') || cleanQuery.includes('chat') || cleanQuery.includes('message'))) {
-      const discordEvent = unique.find(m => {
-        const text = (m.title ?? m.content ?? m.memory ?? m.chunk ?? '').toLowerCase()
-        const app = String(m.metadata?.app ?? '').toLowerCase()
-        return text.includes('discord') || app === 'discord'
-      })
-      if (discordEvent) {
-        const title = this.cleanTitle(discordEvent.title ?? discordEvent.content ?? discordEvent.memory ?? discordEvent.chunk ?? '')
-        specificAnswer = `You were last active on Discord in **${title}** (${getRelativeTime(discordEvent.createdAt)}).`
-      }
-    }
-
-    if (!specificAnswer && (cleanQuery.includes('file') || cleanQuery.includes('code') || cleanQuery.includes('editor') || cleanQuery.includes('project') || cleanQuery.includes('work'))) {
-      const fileEvent = unique.find(m => {
-        const source = String(m.source ?? m.metadata?.source ?? '').toLowerCase()
-        return source === 'filesystem' || source === 'editor'
-      })
-      if (fileEvent) {
-        const title = this.cleanTitle(fileEvent.title ?? fileEvent.content ?? fileEvent.memory ?? fileEvent.chunk ?? '')
-        specificAnswer = `You were last working on **${title}** (${getRelativeTime(fileEvent.createdAt)}).`
-      }
-    }
-
-    if (!specificAnswer) {
-      specificAnswer = `I found ${unique.length} matching activities in your log.`
-    }
-
     const detailLines = unique.slice(0, 15).map(m => {
       const rawText = m.title ?? m.content ?? m.memory ?? m.chunk ?? ''
-      const clean = this.cleanTitle(rawText)
+      const clean = cleanTitle(rawText)
       const src = (m.source ?? m.metadata?.source ?? 'filesystem') as string
       const icon = ICONS[src] ?? '📄'
       const relativeTime = getRelativeTime(m.createdAt)

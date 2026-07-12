@@ -3,6 +3,7 @@ import path from 'path'
 import os from 'os'
 import type { Event, SupermemoryMemory } from '../types.js'
 import { logger } from './logger.js'
+import { tokenizeQuery, expandSearchTerms } from './search.js'
 
 const DB_PATH = path.join(os.homedir(), '.trace', 'events.jsonl')
 
@@ -92,39 +93,12 @@ export class LocalStore {
   }
 
   async search(query: string, limit = 20, startDate?: string, endDate?: string): Promise<SupermemoryMemory[]> {
-    const q = query.toLowerCase()
     const docs: SupermemoryMemory[] = []
     const startMs = startDate ? new Date(startDate).getTime() : 0
     const endMs = endDate ? new Date(endDate).getTime() : Infinity
 
-    // Define stop words
-    const stopWords = new Set([
-      'what', 'were', 'when', 'where', 'that', 'this', 'there', 'with', 'have', 'been', 'your', 'about', 'tell', 'from',
-      'was', 'did', 'does', 'had', 'not', 'the', 'and', 'for', 'are', 'but', 'you', 'our', 'him', 'her', 'its', 'out',
-      'has', 'get', 'set', 'who', 'how', 'why', 'can', 'will', 'would', 'should', 'could', 'than', 'then', 'them',
-      'they', 'their', 'she', 'his', 'any', 'some', 'all', 'into', 'onto', 'over', 'under', 'here'
-    ])
-
-    // Clean terms: keep alphanumeric terms >= 2 chars, filter stop words
-    const terms = q.split(/\s+/).map(w => w.replace(/[^\w]/g, '')).filter(w => w.length >= 2 && !stopWords.has(w))
-
-    // Expand search terms with common synonyms and platform keywords
-    const expanded = new Set(terms)
-    for (const t of terms) {
-      if (t === 'yt' || t === 'youtube' || t === 'video' || t === 'videos') {
-        expanded.add('yt')
-        expanded.add('youtube')
-      }
-      if (t === 'spotify' || t === 'music' || t === 'song' || t === 'listening' || t === 'listen' || t === 'track' || t === 'playing') {
-        expanded.add('spotify')
-        expanded.add('media')
-        expanded.add('track_change')
-      }
-      if (t === 'netflix' || t === 'show' || t === 'movie' || t === 'watching' || t === 'watch') {
-        expanded.add('netflix')
-      }
-    }
-    const searchTerms = Array.from(expanded)
+    const terms = tokenizeQuery(query)
+    const searchTerms = expandSearchTerms(terms)
 
     try {
       if (searchTerms.length === 0) {

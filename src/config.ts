@@ -41,7 +41,7 @@ export function loadConfig(): Config {
     apiKey: envStr('SUPERMEMORY_API_KEY', ''),
     containerTag: envStr('CONTAINER_TAG', 'trace'),
     watchSources: envSources('WATCH_SOURCES', 'filesystem,editor,terminal'),
-    watchPaths: envPaths('WATCH_PATHS', path.join(os.homedir(), 'Projects')),
+    watchPaths: envPaths('WATCH_PATHS', ''),
     chromeHistory: envStr('CHROME_HISTORY', path.join(os.homedir(), 'AppData', 'Local', 'Google', 'Chrome', 'User Data', 'Default', 'History')),
     edgeHistory: envStr('EDGE_HISTORY', path.join(os.homedir(), 'AppData', 'Local', 'Microsoft', 'Edge', 'User Data', 'Default', 'History')),
     braveHistory: envStr('BRAVE_HISTORY', path.join(os.homedir(), 'AppData', 'Local', 'BraveSoftware', 'Brave-Browser', 'User Data', 'Default', 'History')),

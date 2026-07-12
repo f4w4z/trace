@@ -239,6 +239,29 @@ interface PSMedia {
 
 type PSEvent = PSForeground | PSBrowser | PSProcessList | PSIdleStart | PSIdleEnd | PSMedia
 
+const IGNORED_APPS = new Set([
+  'electron',
+  'node',
+  'textinputhost',
+  'systemsettings',
+  'raycast',
+  'raycast.uiaccess',
+  'powertoys.quickaccess',
+  'nvidia overlay',
+  'nvidia share',
+  'searchhost',
+  'shellexperiencehost',
+  'startmenuexperiencehost',
+  'lockapp',
+  'widgets'
+])
+
+function isIgnored(app: string): boolean {
+  if (!app) return true
+  const lower = app.toLowerCase().replace(/\.exe$/, '')
+  return IGNORED_APPS.has(lower)
+}
+
 export class SystemTracker {
   private client: SupermemoryClient
   private proc: ChildProcess | null = null
@@ -361,7 +384,7 @@ export class SystemTracker {
   }
 
   private onForeground(evt: PSForeground): void {
-    if (evt.app === 'electron' || evt.app === 'node') return
+    if (isIgnored(evt.app)) return
     const project = this.guessProject(evt.title, evt.app)
     const content = `${evt.app} · ${evt.title}`
     this.client.addDocument(createEvent('system', 'app_focused', content, {
@@ -430,6 +453,7 @@ export class SystemTracker {
     // Detect newly opened apps
     const prevNames = new Set(this.previousProcs.values())
     for (const [pid, name] of current) {
+      if (isIgnored(name)) continue
       if (!prevNames.has(name) && !this.previousProcs.has(pid)) {
         const project = this.guessProject('', name)
         this.client.addDocument(createEvent('system', 'app_focused', `Opened ${name}`, {
@@ -440,6 +464,7 @@ export class SystemTracker {
 
     // Detect closed apps
     for (const [pid, name] of this.previousProcs) {
+      if (isIgnored(name)) continue
       if (!current.has(pid)) {
         this.client.addDocument(createEvent('system', 'app_closed', `Closed ${name}`, {
           app: name, tags: ['system', name, timeBucket(new Date(evt.ts))],

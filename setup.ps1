@@ -1,7 +1,7 @@
 #Requires -RunAsAdministrator
 <#
 .SYNOPSIS
-    Trace — full setup on a fresh Windows PC.
+    Trace - full setup on a fresh Windows PC.
 .DESCRIPTION
     Installs Node.js, WSL (Ubuntu), Supermemory Local, npm dependencies,
     builds the project, and creates .env from .env.example.
@@ -21,16 +21,16 @@ $Skipped = @()
 $Installed = @()
 $NeedsReboot = $false
 
-# ── Helpers ───────────────────────────────────────────────────────────────
-$Dim    = "`e[2m"
-$Reset  = "`e[0m"
-$Bold   = "`e[1m"
-$Green  = "`e[32m"
-$Yellow = "`e[33m"
-$Cyan   = "`e[36m"
-$Red    = "`e[31m"
-$Gray   = "`e[90m"
-$White  = "`e[37m"
+# ANSI escape via [char]27 for PS 5.1 compat
+$ESC = [char]27
+$Dim    = "$ESC[2m"
+$Reset  = "$ESC[0m"
+$Bold   = "$ESC[1m"
+$Green  = "$ESC[32m"
+$Yellow = "$ESC[33m"
+$Cyan   = "$ESC[36m"
+$Red    = "$ESC[31m"
+$Gray   = "$ESC[90m"
 
 function Write-Banner {
     Write-Host ""
@@ -40,48 +40,49 @@ function Write-Banner {
     Write-Host "  $Bold$Cyan | ||  __/ |  | | | | (_) \ V  V /             $Reset"
     Write-Host "  $Bold$Cyan  \__\___|_|  |_| |_|\___/ \_/\_/              $Reset"
     Write-Host ""
-    Write-Host "  ${Dim}$Gray$($MyInvocation.MyCommand.Name) v0.1.0$Reset"
+    Write-Host "  ${Dim}setup.ps1 v0.1.0${Reset}"
     Write-Host ""
 }
 
-function Write-Step($n, $total, $msg) {
+function Write-Step {
+    param([int]$n, [int]$total, [string]$msg)
     Write-Host ""
     Write-Host "  ${Bold}${Cyan}[$n/$total]${Reset} ${Bold}$msg${Reset}"
 }
 
-function Write-OK($msg) {
+function Write-OK {
+    param([string]$msg)
     Write-Host "  ${Green}$([char]0x2713)${Reset} $msg"
 }
 
-function Write-Installed($msg) {
+function Write-Installed {
+    param([string]$msg)
     Write-Host "  ${Green}$([char]0x2191)${Reset} $msg"
     $script:Installed += $msg
 }
 
-function Write-Skipped($msg) {
+function Write-Skipped {
+    param([string]$msg)
     Write-Host "  ${Gray}$([char]0x2013)${Reset} ${Gray}$msg${Reset}"
     $script:Skipped += $msg
 }
 
-function Write-Warn($msg) {
+function Write-Warn {
+    param([string]$msg)
     Write-Host "  ${Yellow}!${Reset} $msg"
 }
 
-function Write-Err($msg) {
-    Write-Host "  ${Red}x${Reset} $msg"
+function Write-Status {
+    param([string]$msg)
+    Write-Host "    ${Dim}$msg${Reset}"
 }
 
-function Write-Status($line) {
-    Write-Host "    ${Dim}$line${Reset}"
-}
-
-# ── Admin check ───────────────────────────────────────────────────────────
+# --- Admin check -----------------------------------------------------------
 $isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 if (-not $isAdmin) {
     Write-Host ""
-    Write-Host "  ${Red}${Bold}Run as Administrator${Reset}" -NoNewline
-    Write-Host ""
-    Write-Host "  Right-click ${Bold}setup.bat${Reset} and choose ${Bold}'Run as administrator'${Reset}"
+    Write-Host "  ${Red}${Bold}Run as Administrator${Reset}"
+    Write-Host "  Right-click ${Bold}setup.bat${Reset} and choose ${Bold}Run as administrator${Reset}"
     Write-Host ""
     exit 1
 }
@@ -90,7 +91,7 @@ Write-Banner
 $total = 7
 if ($SkipWSL) { $total = 5 }
 
-# ── 1. Git ────────────────────────────────────────────────────────────────
+# --- 1. Git ----------------------------------------------------------------
 Write-Step 1 $total "Git"
 $git = Get-Command git -ErrorAction SilentlyContinue
 if ($git) {
@@ -103,7 +104,7 @@ if ($git) {
     Write-Installed "Git installed"
 }
 
-# ── 2. Node.js ────────────────────────────────────────────────────────────
+# --- 2. Node.js ------------------------------------------------------------
 Write-Step 2 $total "Node.js"
 $node = Get-Command node -ErrorAction SilentlyContinue
 if ($node -and -not $Force) {
@@ -126,7 +127,7 @@ if ($node -and -not $Force) {
     Write-OK "Already installed"
 }
 
-# ── 3. npm dependencies ───────────────────────────────────────────────────
+# --- 3. npm dependencies ---------------------------------------------------
 Write-Step 3 $total "Dependencies"
 $nodeModules = Join-Path $Root "node_modules"
 $pkgLock = Join-Path $Root "package-lock.json"
@@ -153,7 +154,7 @@ if ($needsInstall -or $Force) {
     Write-OK "${Bold}$modCount${Reset} packages already installed"
 }
 
-# ── 4. Build TypeScript ───────────────────────────────────────────────────
+# --- 4. Build TypeScript ---------------------------------------------------
 if (-not $SkipBuild) {
     Write-Step 4 $total "TypeScript"
     $distDir = Join-Path $Root "dist"
@@ -178,12 +179,11 @@ if (-not $SkipBuild) {
         Write-OK "dist/ is up to date"
     }
 } else {
-    $total--
-    Write-Step 4 $total "TypeScript"
+    Write-Step 4 ($total - 1) "TypeScript"
     Write-Skipped "Skipped (-SkipBuild)"
 }
 
-# ── 5. .env file ──────────────────────────────────────────────────────────
+# --- 5. .env file ----------------------------------------------------------
 Write-Step 5 $total "Configuration"
 $envFile = Join-Path $Root ".env"
 $envExample = Join-Path $Root ".env.example"
@@ -195,17 +195,18 @@ if (-not (Test-Path $envFile)) {
     $envKeys = Get-Content $envFile | Where-Object { $_ -match '^[A-Z_]+=' } | ForEach-Object { ($_ -split '=')[0] }
     $missing = $exampleKeys | Where-Object { $_ -notin $envKeys }
     if ($missing) {
-        $missing | ForEach-Object {
-            $line = (Get-Content $envExample | Where-Object { $_ -match "^$_=" }) -replace '^[^=]+=',''
-            Add-Content $envFile "`n$_=$line"
+        foreach ($key in $missing) {
+            $line = (Get-Content $envExample | Where-Object { $_ -match "^$key=" }) -replace '^[^=]+=',''
+            Add-Content $envFile "`n$key=$line"
         }
-        Write-Installed ".env updated ($($missing.Count) missing keys added)"
+        $count = $missing.Count
+        Write-Installed ".env updated ($count missing keys added)"
     } else {
         Write-OK "Exists with all keys"
     }
 }
 
-# ── 6. WSL ────────────────────────────────────────────────────────────────
+# --- 6. WSL ----------------------------------------------------------------
 if (-not $SkipWSL) {
     Write-Step 6 $total "WSL + Ubuntu"
     $wslInstalled = $false
@@ -228,7 +229,7 @@ if (-not $SkipWSL) {
         Write-Warn "Reboot required to finish WSL setup"
     }
 
-    # ── 7. Supermemory ────────────────────────────────────────────────────
+    # --- 7. Supermemory ----------------------------------------------------
     if (-not $SkipSupermemory) {
         Write-Step 7 $total "Supermemory Local"
 
@@ -241,11 +242,12 @@ if (-not $SkipWSL) {
         }
 
         if (-not $wslReady) {
-            Write-Skipped "Pending — WSL needs reboot first"
+            Write-Skipped "Pending - WSL needs reboot first"
         } else {
             $smBinary = $false
             try {
-                $smCheck = wsl -d Ubuntu -- bash -c "test -f /root/.supermemory/bin/supermemory-server && echo ok" 2>$null
+                $smCmd = 'test -f /root/.supermemory/bin/supermemory-server && echo ok'
+                $smCheck = wsl -d Ubuntu -- bash -c $smCmd 2>$null
                 if ($smCheck -match "ok") { $smBinary = $true }
             } catch {}
 
@@ -255,22 +257,15 @@ if (-not $SkipWSL) {
                 Write-Status "Downloading..."
                 $installOk = $false
                 try {
-                    wsl -d Ubuntu -u root -- bash -c @"
-set -e
-mkdir -p /root/.supermemory
-cd /root/.supermemory
-curl -fsSL https://github.com/supermemoryai/supermemory/releases/latest/download/supermemory-linux-amd64.tar.gz -o sm.tar.gz
-tar xzf sm.tar.gz --strip-components=0 -C /root/.supermemory
-rm -f sm.tar.gz
-chmod +x /root/.supermemory/bin/supermemory-server
-"@ 2>$null
+                    $smScript = "set -e; mkdir -p /root/.supermemory; cd /root/.supermemory; curl -fsSL https://github.com/supermemoryai/supermemory/releases/latest/download/supermemory-linux-amd64.tar.gz -o sm.tar.gz; tar xzf sm.tar.gz --strip-components=0 -C /root/.supermemory; rm -f sm.tar.gz; chmod +x /root/.supermemory/bin/supermemory-server"
+                    wsl -d Ubuntu -u root -- bash -c $smScript 2>$null | Out-Null
                     $installOk = $true
                 } catch {}
 
                 if ($installOk) {
                     Write-Installed "Supermemory Local installed"
                 } else {
-                    Write-Warn "Install failed — will retry after reboot"
+                    Write-Warn "Install failed - will retry after reboot"
                 }
             }
 
@@ -288,8 +283,7 @@ chmod +x /root/.supermemory/bin/supermemory-server
     }
 }
 
-# ── 8. Firewall ───────────────────────────────────────────────────────────
-# (always runs, no step number — it's a finalization step)
+# --- 8. Firewall -----------------------------------------------------------
 Write-Host ""
 Write-Host "  ${Bold}${Cyan}Finalizing${Reset}"
 $traceAPI = Get-NetFirewallRule -DisplayName "Trace API" -ErrorAction SilentlyContinue
@@ -309,7 +303,8 @@ if ($needAPI -or $needHUD) {
         $ports = @()
         if ($needAPI) { $ports += "6768" }
         if ($needHUD) { $ports += "6769" }
-        Write-OK "Firewall rules added (ports $($ports -join ', '))"
+        $portStr = $ports -join ', '
+        Write-OK "Firewall rules added (ports $portStr)"
     } catch {
         Write-Warn "Could not add firewall rules (non-critical)"
     }
@@ -317,9 +312,10 @@ if ($needAPI -or $needHUD) {
     Write-OK "Firewall rules already exist"
 }
 
-# ── Summary ────────────────────────────────────────────────────────────────
+# --- Summary ---------------------------------------------------------------
+$sep = "=" * 44
 Write-Host ""
-Write-Host "  $Bold$('=' * 44)$Reset"
+Write-Host "  $Bold$sep$Reset"
 Write-Host ""
 
 if ($NeedsReboot) {
@@ -336,7 +332,7 @@ if ($NeedsReboot) {
     Write-Host "    ${Bold}1.${Reset} ${Bold}Reboot your PC now${Reset}"
     Write-Host "    ${Bold}2.${Reset} After reboot, ${Bold}open Ubuntu once${Reset} from the Start menu"
     Write-Host "       to set your UNIX username and password"
-    Write-Host "    ${Bold}3.${Reset} Run ${Bold}setup.bat${Reset} again — it will:"
+    Write-Host "    ${Bold}3.${Reset} Run ${Bold}setup.bat${Reset} again - it will:"
     Write-Host "       ${Dim}- Skip everything already done (< 5 seconds)${Reset}"
     Write-Host "       ${Dim}- Install Supermemory Local in WSL${Reset}"
     Write-Host "       ${Dim}- Finish the remaining setup${Reset}"
@@ -347,12 +343,16 @@ if ($NeedsReboot) {
 
     if ($Installed.Count -gt 0) {
         Write-Host "  ${Cyan}Installed:${Reset}"
-        $Installed | ForEach-Object { Write-Host "    ${Green}$([char]0x2191)${Reset} $_" }
+        foreach ($item in $Installed) {
+            Write-Host "    ${Green}$([char]0x2191)${Reset} $item"
+        }
         Write-Host ""
     }
     if ($Skipped.Count -gt 0) {
         Write-Host "  ${Gray}Already done:${Reset}"
-        $Skipped | ForEach-Object { Write-Host "    ${Gray}$([char]0x2013)${Reset} $_" }
+        foreach ($item in $Skipped) {
+            Write-Host "    ${Gray}$([char]0x2013)${Reset} $item"
+        }
         Write-Host ""
     }
 
@@ -366,5 +366,5 @@ if ($NeedsReboot) {
     Write-Host ""
 }
 
-Write-Host "  $Bold$('=' * 44)$Reset"
+Write-Host "  $Bold$sep$Reset"
 Write-Host ""

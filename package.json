@@ -4,13 +4,16 @@
   "description": "Local Context Cloud — OS-level memory layer using Supermemory Local (localhost:6767)",
   "private": true,
   "type": "module",
+  "main": "app/main.cjs",
   "scripts": {
     "build": "tsc",
     "start": "node dist/index.js",
     "dev": "tsx watch src/index.ts",
     "lint": "tsc --noEmit",
     "hud": "node dist/index.js --hud-only",
-    "app": "electron app/main.cjs"
+    "app": "electron app/main.cjs",
+    "package": "npm run build && electron-builder --win",
+    "package:dir": "npm run build && electron-builder --win --dir"
   },
   "dependencies": {
     "chokidar": "^4.0.3",
@@ -26,7 +29,54 @@
     "@types/sql.js": "^1.4.11",
     "@types/ws": "^8.18.1",
     "electron": "^43.1.0",
+    "electron-builder": "^25.1.8",
     "tsx": "^4.19.3",
     "typescript": "^5.8.3"
+  },
+  "build": {
+    "appId": "com.trace.app",
+    "productName": "Trace",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "app/**/*",
+      "dist/**/*",
+      "node_modules/**/*",
+      "!node_modules/**/{test,tests,__tests__,doc,docs}/**",
+      "!**/*.{map,ts}",
+      "!.env",
+      "!start.vbs",
+      "!stop.vbs",
+      "!setup.ps1",
+      "!setup.bat",
+      "!release/**",
+      "!site/**",
+      "!hud-ui/**",
+      "!.trace/**",
+      "!.smt/**"
+    ],
+    "extraResources": [
+      {
+        "from": ".env.example",
+        "to": ".env.example"
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Trace"
+    }
   }
 }

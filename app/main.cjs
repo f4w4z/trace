@@ -1,13 +1,33 @@
 const { app, globalShortcut, BrowserWindow, Tray, Menu, nativeImage, screen, ipcMain, shell } = require('electron')
-const { spawn } = require('child_process')
+const { spawn, fork } = require('child_process')
 const path = require('path')
 const fs = require('fs')
 const os = require('os')
 const http = require('http')
 const net = require('net')
 
+const isPackaged = app.isPackaged
 const API_PORT = 6768
+
+// __dirname works in both dev and packaged (asar) — Electron patches fs for asar reads
 const SERVER_SCRIPT = path.join(__dirname, '..', 'dist', 'index.js').replace(/\\/g, '/')
+
+// Writable paths — logs and config go to userData in packaged mode
+const logDir = isPackaged ? app.getPath('userData') : path.join(__dirname, '..')
+const backendLogPath = path.join(logDir, 'backend.log')
+const supermemoryLogPath = path.join(logDir, 'supermemory.log')
+
+// In packaged mode, load .env from userData so user config persists across updates
+if (isPackaged) {
+  const userEnv = path.join(app.getPath('userData'), '.env')
+  if (!fs.existsSync(userEnv)) {
+    const bundledEnv = path.join(process.resourcesPath, '.env.example')
+    if (fs.existsSync(bundledEnv)) fs.copyFileSync(bundledEnv, userEnv)
+  }
+  if (fs.existsSync(userEnv)) {
+    require('dotenv').config({ path: userEnv })
+  }
+}
 
 let win = null
 let tray = null
@@ -142,7 +162,7 @@ async function runServicesStartup(splashWindow) {
 
 function readLastLogLines() {
   try {
-    const logPath = path.join(__dirname, '..', 'supermemory.log')
+    const logPath = supermemoryLogPath
     if (!fs.existsSync(logPath)) return ''
     const content = fs.readFileSync(logPath, 'utf8')
     const lines = content.split('\n')
@@ -207,26 +227,40 @@ async function ensureServer() {
   if (running) return true
   console.log('starting trace server...')
   
+  const env = { ...process.env, SUPERMEMORY_URL: wslIp ? `http://${wslIp}:6767` : undefined }
+
   try {
-    const logPath = path.join(__dirname, '..', 'backend.log')
-    const logStream = fs.createWriteStream(logPath, { flags: 'a' })
+    const logStream = fs.createWriteStream(backendLogPath, { flags: 'a' })
     
-    serverProcess = spawn('node', [SERVER_SCRIPT], {
-      detached: false,
-      windowsHide: true,
-      env: { ...process.env, SUPERMEMORY_URL: wslIp ? `http://${wslIp}:6767` : undefined },
-    })
-    
-    serverProcess.stdout.pipe(logStream)
-    serverProcess.stderr.pipe(logStream)
+    if (isPackaged) {
+      // In packaged app, fork() uses Electron's bundled Node.js runtime
+      serverProcess = fork(SERVER_SCRIPT, {
+        silent: true,
+        env,
+      })
+      serverProcess.stdout.pipe(logStream)
+      serverProcess.stderr.pipe(logStream)
+    } else {
+      serverProcess = spawn('node', [SERVER_SCRIPT], {
+        detached: false,
+        windowsHide: true,
+        env,
+      })
+      serverProcess.stdout.pipe(logStream)
+      serverProcess.stderr.pipe(logStream)
+    }
   } catch (err) {
     console.error('Failed to create backend.log write stream:', err.message)
-    serverProcess = spawn('node', [SERVER_SCRIPT], {
-      stdio: 'ignore',
-      detached: false,
-      windowsHide: true,
-      env: { ...process.env, SUPERMEMORY_URL: wslIp ? `http://${wslIp}:6767` : undefined },
-    })
+    if (isPackaged) {
+      serverProcess = fork(SERVER_SCRIPT, { silent: true, env })
+    } else {
+      serverProcess = spawn('node', [SERVER_SCRIPT], {
+        stdio: 'ignore',
+        detached: false,
+        windowsHide: true,
+        env,
+      })
+    }
   }
 
   // wait for it to be ready
@@ -540,10 +574,16 @@ app.whenReady().then(async () => {
   ipcMain.handle('exec-command', async (_, cmd) => {
     switch (cmd) {
       case 'restart': {
-        spawn('wscript.exe', [path.join(__dirname, '..', 'start.vbs')], {
-          detached: true, stdio: 'ignore', windowsHide: true,
-        }).unref()
-        app.quit()
+        if (isPackaged) {
+          // In packaged mode, just relaunch the exe
+          app.relaunch()
+          app.quit()
+        } else {
+          spawn('wscript.exe', [path.join(__dirname, '..', 'start.vbs')], {
+            detached: true, stdio: 'ignore', windowsHide: true,
+          }).unref()
+          app.quit()
+        }
         return 'Restarting...'
       }
       case 'restart-server': {

@@ -60,10 +60,6 @@
       {
         "from": ".env.example",
         "to": ".env.example"
-      },
-      {
-        "from": "build/supermemory-ubuntu.tar.gz",
-        "to": "supermemory-ubuntu.tar.gz"
       }
     ],
     "win": {

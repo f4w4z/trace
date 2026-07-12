@@ -10,7 +10,7 @@ If fso.FileExists(sysnative) Then
 End If
 
 ' Kill Supermemory server process inside WSL directly
-WshShell.Run wslPath & " -d trace-vm -u root pkill -f supermemory", 0, True
+WshShell.Run wslPath & " -d Ubuntu -u root pkill -f supermemory", 0, True
 
 ' Kill trace API server (port 6768)
 WshShell.Run "cmd /c for /f ""tokens=5"" %a in ('netstat -ano ^| findstr "":6768 ""') do taskkill /f /pid %a 2>nul", 0, True

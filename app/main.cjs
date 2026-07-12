@@ -66,13 +66,8 @@ function killPort(port) {
 
 let wslIp = ''
 
-const WSL_DISTRO = 'trace-vm'
-const VM_DIR = isPackaged
-  ? path.join('C:\\ProgramData', 'Trace', 'vm')
-  : path.join(os.homedir(), '.trace', 'vm')
-const TARBALL = isPackaged
-  ? path.join(process.resourcesPath, 'supermemory-ubuntu.tar.gz')
-  : path.join(__dirname, '..', 'build', 'supermemory-ubuntu.tar.gz')
+const WSL_DISTRO = 'Ubuntu'
+const SM_BIN = '/root/.supermemory/bin/supermemory-server'
 
 function execCommand(cmd, timeoutMs = 10000) {
   return new Promise((resolve) => {
@@ -88,8 +83,14 @@ function execCommand(cmd, timeoutMs = 10000) {
   })
 }
 
-function execCommandLong(cmd, timeoutMs = 120000) {
-  return execCommand(cmd, timeoutMs)
+async function detectWslIp() {
+  for (let i = 0; i < 10; i++) {
+    const ip = await execCommand(`wsl -d ${WSL_DISTRO} hostname -I`)
+    if (ip) { wslIp = ip; console.log(`wsl: detected IP ${wslIp}`); return wslIp }
+    await new Promise(r => setTimeout(r, 2000))
+  }
+  console.log('wsl: could not detect IP')
+  return ''
 }
 
 async function isWslInstalled() {
@@ -105,38 +106,28 @@ async function isDistroRegistered(name) {
   return list.split(/\r?\n/).some(line => line.trim() === name)
 }
 
-async function importDistro(splashWindow) {
+async function isSupermemoryInstalled() {
+  const result = await execCommand(`wsl -d ${WSL_DISTRO} -u root -- test -x ${SM_BIN} && echo ok`, 5000)
+  return result.includes('ok')
+}
+
+async function installSupermemory(splashWindow) {
   const update = (msg) => {
     if (splashWindow && !splashWindow.isDestroyed()) {
       splashWindow.webContents.send('status-update', { statusText: msg })
     }
   }
 
-  console.log(`wsl: importing ${WSL_DISTRO} from ${TARBALL}`)
+  update('Downloading Supermemory (~300 MB, one-time)...')
+  console.log('wsl: installing supermemory...')
 
-  // Ensure VM directory exists
-  if (!fs.existsSync(VM_DIR)) fs.mkdirSync(VM_DIR, { recursive: true })
+  const result = await execCommand(`wsl -d ${WSL_DISTRO} -u root -- bash -c "set -e; mkdir -p /root/.supermemory/bin /root/.supermemory/data; cd /root/.supermemory/bin; curl -fsSL https://github.com/supermemoryai/supermemory/releases/download/server-v0.0.5/supermemory-server-linux-x64 -o supermemory-server; chmod +x supermemory-server; echo ok"`, 300000)
 
-  // Remove old distro if it exists but is broken
-  await execCommand(`wsl --unregister ${WSL_DISTRO}`, 30000)
-
-  update('Importing Supermemory image (first time only)...')
-
-  // Import — this extracts the tarball into a new WSL distro
-  const result = await execCommandLong(
-    `wsl --import ${WSL_DISTRO} "${VM_DIR}" "${TARBALL}"`,
-    180000
-  )
-
-  console.log(`wsl: import result: ${result}`)
-
-  // Verify it worked
-  const registered = await isDistroRegistered(WSL_DISTRO)
-  if (!registered) {
-    throw new Error(`WSL import failed: ${result}`)
+  if (!result.includes('ok')) {
+    throw new Error(`Supermemory install failed: ${result}`)
   }
 
-  console.log(`wsl: ${WSL_DISTRO} imported successfully`)
+  console.log('wsl: supermemory installed')
 }
 
 async function startSupermemory(splashWindow) {
@@ -145,23 +136,12 @@ async function startSupermemory(splashWindow) {
 
   const logPath = isPackaged ? supermemoryLogPath : path.join(__dirname, '..', 'supermemory.log')
   const wslLogPath = logPath.replace(/\\/g, '/')
-  // Convert Windows path to WSL mount path (C:\foo -> /mnt/c/foo)
   const wslMountLog = wslLogPath.replace(/^([A-Za-z]):\//, (_, drive) => `/mnt/${drive.toLowerCase()}/`)
 
-  const cmd = `wsl -d ${WSL_DISTRO} -u root -- bash -c "export SUPERMEMORY_NO_PROMPT=1; export OPENAI_API_KEY=dummy; /root/.supermemory/bin/supermemory-server 2>&1 | tee ${wslMountLog}"`
+  const cmd = `wsl -d ${WSL_DISTRO} -u root -- bash -c "export SUPERMEMORY_NO_PROMPT=1; export OPENAI_API_KEY=dummy; ${SM_BIN} 2>&1 | tee ${wslMountLog}"`
   spawn('cmd', ['/c', cmd], {
     detached: true, stdio: 'ignore', windowsHide: true,
   }).unref()
-}
-
-async function detectWslIp() {
-  for (let i = 0; i < 10; i++) {
-    const ip = await execCommand(`wsl -d ${WSL_DISTRO} hostname -I`)
-    if (ip) { wslIp = ip; console.log(`wsl: detected IP ${wslIp}`); return wslIp }
-    await new Promise(r => setTimeout(r, 2000))
-  }
-  console.log('wsl: could not detect IP')
-  return ''
 }
 
 async function waitForSupermemory() {
@@ -208,28 +188,34 @@ async function runServicesStartup(splashWindow) {
     return
   }
 
-  // 3. Ensure the trace-vm distro is registered (auto-import on first run)
+  // 3. Ensure Ubuntu distro exists
   const hasDistro = await isDistroRegistered(WSL_DISTRO)
   if (!hasDistro) {
-    try {
-      update({ env: 'active' }, 'Setting up Supermemory (first time — one moment)...', 15)
-      await importDistro(splashWindow)
-    } catch (err) {
-      console.error('wsl: import failed:', err.message)
-      update({ env: 'error' }, `WSL import failed: ${err.message}`, 15)
-      return
-    }
+    update({ env: 'error' }, 'Ubuntu not found in WSL. Install it from Microsoft Store.', 10)
+    return
   }
   update({ env: 'done' }, 'WSL ready', 25)
 
-  // 4. Detect WSL IP for direct connection
+  // 4. Ensure Supermemory is installed (downloads ~300MB on first run)
+  const smReady = await isSupermemoryInstalled()
+  if (!smReady) {
+    try {
+      await installSupermemory(splashWindow)
+    } catch (err) {
+      console.error('wsl: supermemory install failed:', err.message)
+      update({ db: 'error' }, `Supermemory install failed: ${err.message}`, 30)
+      // Continue — app works in degraded mode
+    }
+  }
+
+  // 5. Detect WSL IP for direct connection
   if (!wslIp) await detectWslIp()
 
-  // 5. Start Supermemory inside the distro
+  // 6. Start Supermemory inside the distro
   update({ db: 'active' }, 'Starting Supermemory Local...', 40)
   await startSupermemory(splashWindow)
 
-  // 6. Wait for Supermemory to be reachable
+  // 7. Wait for Supermemory to be reachable
   const logInterval = pollSupermemoryLogs(splashWindow)
   const dbUp = await waitForSupermemory()
   clearInterval(logInterval)
@@ -244,7 +230,7 @@ async function runServicesStartup(splashWindow) {
     update({ db: 'error', daemon: 'active' }, 'Supermemory unavailable. Starting degraded...', 70)
   }
 
-  // 7. Start backend daemon
+  // 8. Start backend daemon
   const currentSettings = loadSettings()
   const needsOnboarding = !currentSettings || !currentSettings.onboarded || !currentSettings.name
   const readyMsg = needsOnboarding ? 'Starting onboarding wizard...' : 'Trace is active in tray! Press Alt+X to search.'

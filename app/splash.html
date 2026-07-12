@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>trace</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html, body {
+    width: 100%; height: 100%;
+    background: transparent;
+    overflow: hidden;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  #container {
+    width: 100%; height: 100%;
+    background: #121216;
+    border-radius: 16px;
+    display: flex; flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 30px;
+    position: relative;
+    animation: fadeIn 0.3s ease;
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+  }
+  #container.closing {
+    animation: fadeOut 0.25s ease forwards;
+  }
+  @keyframes fadeOut {
+    from { opacity: 1; transform: scale(1); }
+    to { opacity: 0; transform: scale(0.95); }
+  }
+  .logo-container {
+    position: relative;
+    margin-bottom: 12px;
+  }
+  .glow-circle {
+    display: none;
+  }
+  .logo-img {
+    width: 48px; height: 48px;
+    object-fit: contain;
+    position: relative;
+    z-index: 2;
+  }
+  .title {
+    font-size: 20px; font-weight: 700;
+    color: #ffffff;
+    letter-spacing: -0.5px;
+    margin-bottom: 4px;
+    z-index: 2;
+  }
+  .subtitle {
+    font-size: 11px; font-weight: 500;
+    color: rgba(255, 255, 255, 0.35);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin-bottom: 24px;
+    z-index: 2;
+  }
+  .steps {
+    width: 100%;
+    max-width: 280px;
+    display: flex; flex-direction: column;
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+  .step-row {
+    display: flex; align-items: center; gap: 12px;
+    font-size: 13px; color: rgba(255, 255, 255, 0.25);
+    transition: color 0.2s ease;
+  }
+  .step-row.active {
+    color: rgba(255, 255, 255, 0.9);
+  }
+  .step-row.done {
+    color: rgba(255, 255, 255, 0.6);
+  }
+  .step-icon {
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    border: 1.5px solid rgba(255, 255, 255, 0.15);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px;
+    font-weight: bold;
+    flex-shrink: 0;
+    transition: all 0.25s ease;
+  }
+  .step-row.active .step-icon {
+    border-color: rgba(255, 255, 255, 0.6);
+    position: relative;
+  }
+  .step-row.active .step-icon::before {
+    content: '';
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.6);
+    animation: beacon 1.2s infinite ease-in-out;
+  }
+  @keyframes beacon {
+    0%, 100% { transform: scale(0.8); opacity: 0.5; }
+    50% { transform: scale(1.2); opacity: 1; }
+  }
+  .step-row.done .step-icon {
+    border-color: rgba(255, 255, 255, 0.4);
+    color: rgba(255, 255, 255, 0.6);
+  }
+  .step-row.done .step-icon::before {
+    content: '✓';
+  }
+  .step-row.error .step-icon {
+    border-color: rgba(255, 255, 255, 0.4);
+    color: rgba(255, 255, 255, 0.6);
+  }
+  .step-row.error .step-icon::before {
+    content: '✕';
+  }
+  .progress-bg {
+    width: 100%; max-width: 280px;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.04);
+    border-radius: 2px;
+    overflow: hidden;
+    margin-bottom: 12px;
+  }
+  .progress-bar {
+    height: 100%; width: 0%;
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 2px;
+    transition: width 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .status-msg {
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.35);
+    text-align: center;
+    max-width: 280px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  #logs {
+    display: none;
+    width: 100%;
+    max-width: 280px;
+    max-height: 80px;
+    margin-top: 10px;
+    overflow-y: auto;
+    font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+    font-size: 10px;
+    line-height: 1.5;
+    color: rgba(255, 255, 255, 0.25);
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
+  #logs.visible { display: block; }
+  #logs::-webkit-scrollbar { width: 3px; }
+  #logs::-webkit-scrollbar-track { background: transparent; }
+  #logs::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.06); border-radius: 2px; }
+</style>
+</head>
+<body>
+<div id="container">
+  <div class="logo-container">
+    <div class="glow-circle"></div>
+    <img class="logo-img" src="assets/logo-darkmode.png" alt="trace logo">
+  </div>
+  <div class="title">trace</div>
+  <div class="subtitle">local context cloud</div>
+  
+  <div class="steps">
+    <div id="step-env" class="step-row">
+      <div class="step-icon"></div>
+      <div class="step-label">Port & network setup</div>
+    </div>
+    <div id="step-db" class="step-row">
+      <div class="step-icon"></div>
+      <div class="step-label">Supermemory Local</div>
+    </div>
+    <div id="step-daemon" class="step-row">
+      <div class="step-icon"></div>
+      <div class="step-label">Trace context daemon</div>
+    </div>
+  </div>
+  
+  <div class="progress-bg">
+    <div id="progress" class="progress-bar"></div>
+  </div>
+  <div id="status" class="status-msg">Initializing trace...</div>
+  <div id="logs"></div>
+</div>
+
+<script>
+  window.trace.onStatusUpdate((data) => {
+    if (data.statusText) {
+      document.getElementById('status').textContent = data.statusText;
+    }
+    if (data.progress !== undefined) {
+      document.getElementById('progress').style.width = data.progress + '%';
+    }
+    if (data.logs) {
+      const el = document.getElementById('logs');
+      el.textContent = data.logs;
+      el.classList.add('visible');
+      el.scrollTop = el.scrollHeight;
+    }
+    
+    const updateStep = (id, state) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.classList.remove('active', 'done', 'error');
+      if (state) el.classList.add(state);
+    };
+    
+    if (data.steps) {
+      if (data.steps.env) updateStep('step-env', data.steps.env);
+      if (data.steps.db) updateStep('step-db', data.steps.db);
+      if (data.steps.daemon) updateStep('step-daemon', data.steps.daemon);
+    }
+    
+    if (data.action === 'close') {
+      document.getElementById('container').classList.add('closing');
+    }
+  });
+</script>
+</body>
+</html>

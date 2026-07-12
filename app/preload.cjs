@@ -16,4 +16,6 @@ contextBridge.exposeInMainWorld('trace', {
   getSettings: () => ipcRenderer.invoke('get-settings'),
   saveSettings: (s) => ipcRenderer.invoke('save-settings', s),
   setRunAtStartup: (enable) => ipcRenderer.invoke('set-run-at-startup', enable),
+  getSupermemoryStatus: () => ipcRenderer.invoke('get-supermemory-status'),
+  onStatusUpdate: (fn) => ipcRenderer.on('status-update', (event, data) => fn(data)),
 })

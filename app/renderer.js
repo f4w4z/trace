@@ -265,11 +265,22 @@ async function pollSummary() {
     summary.classList.add('visible')
     document.getElementById('summary-loading').classList.add('visible')
   }
-  const data = await withTimeout(window.trace.api('GET', '/context/summary'), 30000)
-  if (!chatMode) document.getElementById('summary-loading').classList.remove('visible')
-  if (!data) return
-  lastSummary = data
-  if (!chatMode) renderSummary(data)
+  try {
+    const data = await withTimeout(window.trace.api('GET', '/context/summary'), 30000)
+    if (data && data.error) {
+      throw new Error(data.error)
+    }
+    if (!chatMode) document.getElementById('summary-loading').classList.remove('visible')
+    if (!data || !data.text) {
+      summary.classList.remove('visible')
+      return
+    }
+    lastSummary = data
+    if (!chatMode) renderSummary(data)
+  } catch (err) {
+    console.error('Failed to poll summary, retrying in 3s:', err)
+    setTimeout(pollSummary, 3000)
+  }
 }
 
 function closeWindow() {
@@ -464,7 +475,12 @@ async function sendMessage() {
       llm: !aiMode,
       tz
     })
-    if (data?.answer) {
+    if (data?.error) {
+      const msg = data.error === 'timeout'
+        ? 'Query timed out. Your activity was found but the AI response took too long. Try a simpler question.'
+        : `Error: ${data.error}`
+      addAiMsgToConv(targetConv, msg, data.memories ?? [])
+    } else if (data?.answer) {
       addAiMsgToConv(targetConv, data.answer, data.memories ?? [])
     } else if (data?.memories?.length) {
       const fallback = formatFallbackAnswer(q, data.memories)
@@ -904,3 +920,52 @@ function formatFallbackAnswer(query, memories) {
 
   return `${specificAnswer}\n---\nHere is the timeline of matching activity:\n${detailLines}`
 }
+
+function pollSupermemoryStatus() {
+  const container = document.getElementById('supermemory-status-container')
+  const logsEl = document.getElementById('supermemory-logs')
+  if (!container || !logsEl) return
+
+  const titleEl = container.querySelector('.shimmer')
+  let wasStarting = false
+
+  const interval = setInterval(async () => {
+    try {
+      const info = await window.trace.getSupermemoryStatus()
+      if (info && info.status === 'starting') {
+        wasStarting = true
+        container.style.display = 'block'
+        logsEl.textContent = info.logs || 'Initializing Supermemory local...'
+      } else {
+        if (wasStarting) {
+          // Transition to success state
+          if (titleEl) {
+            titleEl.textContent = 'Supermemory started successfully!'
+            titleEl.style.color = '#10b981'
+          }
+          logsEl.textContent = 'All services are now online.'
+          logsEl.style.color = '#34d399'
+
+          setTimeout(() => {
+            container.style.display = 'none'
+            // Reset styles for future launches
+            if (titleEl) {
+              titleEl.textContent = 'Supermemory is starting...'
+              titleEl.style.color = '#a855f7'
+            }
+            logsEl.style.color = '#c084fc'
+          }, 2000)
+
+          clearInterval(interval)
+        } else {
+          container.style.display = 'none'
+          clearInterval(interval)
+        }
+      }
+    } catch (err) {
+      console.error('Failed to get Supermemory status:', err)
+    }
+  }, 1000)
+}
+
+pollSupermemoryStatus()

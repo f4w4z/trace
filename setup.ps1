@@ -162,29 +162,46 @@ if (-not $SkipWSL) {
         # wsl --list fails if WSL feature is not enabled
     }
 
+    $wslNeedsReboot = $false
     if ($wslInstalled) {
         Write-OK "Ubuntu is installed in WSL"
     } else {
         Write-Host "   Installing WSL with Ubuntu..."
         wsl --install --distribution Ubuntu --no-launch
-        Write-Done "WSL + Ubuntu installed (reboot may be required)"
+        $wslNeedsReboot = $true
+        Write-Done "WSL + Ubuntu installed (reboot required)"
         Write-Warn "After reboot, open Ubuntu once to set your UNIX username/password."
     }
 
     # ── 7. Supermemory Local ──────────────────────────────────────────────
     if (-not $SkipSupermemory) {
         Write-Step "Checking Supermemory Local"
-        $smBinary = $false
-        try {
-            $smCheck = wsl -d Ubuntu -- bash -c "test -f /root/.supermemory/bin/supermemory-server && echo ok" 2>$null
-            if ($smCheck -match "ok") { $smBinary = $true }
-        } catch {}
 
-        if ($smBinary -and -not $Force) {
-            Write-OK "Supermemory Local already installed"
+        # Verify WSL + Ubuntu is actually usable right now
+        $wslReady = $false
+        if (-not $wslNeedsReboot) {
+            try {
+                $testRun = wsl -d Ubuntu -- echo ok 2>$null
+                if ($testRun -match "ok") { $wslReady = $true }
+            } catch {}
+        }
+
+        if (-not $wslReady) {
+            Write-Skip "Supermemory Local (WSL not ready yet — run setup again after reboot)"
         } else {
-            Write-Host "   Downloading and installing Supermemory..."
-            wsl -d Ubuntu -u root -- bash -c @"
+            $smBinary = $false
+            try {
+                $smCheck = wsl -d Ubuntu -- bash -c "test -f /root/.supermemory/bin/supermemory-server && echo ok" 2>$null
+                if ($smCheck -match "ok") { $smBinary = $true }
+            } catch {}
+
+            if ($smBinary -and -not $Force) {
+                Write-OK "Supermemory Local already installed"
+            } else {
+                Write-Host "   Downloading and installing Supermemory..."
+                $installOk = $false
+                try {
+                    wsl -d Ubuntu -u root -- bash -c @"
 set -e
 mkdir -p /root/.supermemory
 cd /root/.supermemory
@@ -193,12 +210,22 @@ tar xzf sm.tar.gz --strip-components=0 -C /root/.supermemory
 rm -f sm.tar.gz
 chmod +x /root/.supermemory/bin/supermemory-server
 echo 'Supermemory Local installed at /root/.supermemory/bin/supermemory-server'
-"@
-            Write-Done "Supermemory Local installed"
-        }
+"@ 2>$null
+                    $installOk = $true
+                } catch {}
 
-        # Ensure data dir exists
-        wsl -d Ubuntu -u root -- bash -c "mkdir -p /root/.supermemory/data" 2>$null | Out-Null
+                if ($installOk) {
+                    Write-Done "Supermemory Local installed"
+                } else {
+                    Write-Warn "Supermemory install failed — run setup again after reboot"
+                }
+            }
+
+            # Ensure data dir exists
+            if ($smBinary -or $installOk) {
+                wsl -d Ubuntu -u root -- bash -c "mkdir -p /root/.supermemory/data" 2>$null | Out-Null
+            }
+        }
     }
 } else {
     Write-Skip "WSL / Ubuntu (-SkipWSL)"

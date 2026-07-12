@@ -88,9 +88,9 @@ function Invoke-WithProgress {
     $spinChars = @([char]0x2502, [char]0x2571, [char]0x2500, [char]0x2572, [char]0x2502, [char]0x2571, [char]0x2500, [char]0x2572)
     $i = 0
     $width = 30
-    $filled = $ESC[48;2;0;200;120m
-    $empty  = $ESC[48;2;50;50;55m
-    $barReset = $ESC[0m
+    $filled = "$ESC" + "[48;2;0;200;120m"
+    $empty  = "$ESC" + "[48;2;50;50;55m"
+    $barReset = "$ESC" + "[0m"
 
     while ($job.State -eq 'Running') {
         $pct = ($i % 100)

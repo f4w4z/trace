@@ -4,6 +4,7 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: trace-supermemory
+    hostname: trace-supermemory
     ports:
       - "6767:6767"
     volumes:

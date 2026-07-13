@@ -20,7 +20,7 @@ WshShell.Run "docker rm trace-supermemory 2>nul", 0, True
 WScript.Sleep 500
 
 ' Start Supermemory via Docker Compose
-WshShell.Run "cmd /c cd /d """ & smt & """ && docker compose up -d --build", 0, False
+WshShell.Run "cmd /c cd /d """ & smt & """ && docker compose up -d", 0, False
 WScript.Sleep 1000
 ' Tail container logs to file for splash screen
 WshShell.Run "cmd /c cd /d """ & smt & """ && docker compose logs -f > supermemory.log 2>&1", 0, False

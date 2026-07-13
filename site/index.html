@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>trace - local context cloud</title>
+<meta name="description" content="trace gives your AI assistants a persistent memory of what you do on your computer. Captures activity locally, indexes with Supermemory, exposes via chat overlay and API.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -118,6 +119,11 @@ code {
   padding: 4px 0;
   font-family: 'Inter', monospace;
 }
+.endpoint-group {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid #121212;
+}
 footer {
   margin-top: 80px;
   padding-top: 20px;
@@ -143,9 +149,9 @@ footer a { font-size: 12px; }
 <div class="section">
 <div class="section-label">How it works</div>
 <div class="arch-grid">
-<div class="arch-item"><div class="label">Capture</div><div class="desc">A persistent PowerShell process streams what you do: foreground window changes, browser URLs (via UI Automation), running processes, and idle state. Separate watchers track file edits, editor projects, and terminal commands. All events are timestamped and tagged with source, app, and project context.</div></div>
+<div class="arch-item"><div class="label">Capture</div><div class="desc">A persistent PowerShell process streams what you do: foreground window changes, browser URLs (via UI Automation), running processes, and idle state. Separate watchers track file edits, editor projects, terminal commands, git activity, and clipboard. All events are timestamped and tagged with source, app, and project context.</div></div>
 <div class="arch-item"><div class="label">Store</div><div class="desc">Every event is written immediately to <code>~/.trace/events.jsonl</code> and asynchronously posted to Supermemory Local on port 6767 for chunking, embedding, and indexing. The local file acts as the source of truth. Supermemory provides hybrid vector-keyword search. If Supermemory is down, all queries fall back to full substring scan of the local file.</div></div>
-<div class="arch-item"><div class="label">Query</div><div class="desc">An Express server on port 6768 exposes REST endpoints for context retrieval, search, daily summaries, and MCP-compatible tools for AI agents. An LLM-powered Q&A mode sends your query plus relevant memories to any OpenAI-compatible endpoint (OpenRouter, OpenAI, Ollama, etc.) and returns a natural language answer citing specific apps, files, and URLs.</div></div>
+<div class="arch-item"><div class="label">Query</div><div class="desc">An Express server on port 6768 exposes REST endpoints for context retrieval, search, daily summaries, and MCP-compatible tools for AI agents. An LLM-powered Q&amp;A mode sends your query plus relevant memories to any OpenAI-compatible endpoint (OpenRouter, OpenAI, Ollama, etc.) and returns a natural language answer citing specific apps, files, and URLs.</div></div>
 <div class="arch-item"><div class="label">Access</div><div class="desc">Press Alt+X to open a frameless chat overlay where you can type questions and get answers with supporting evidence. A web-based HUD on port 6769 shows live activity, session timelines, and search results. The API can be used directly, or through MCP tools integrated into OpenCode, Claude Code, Cursor, and other AI coding assistants.</div></div>
 </div>
 </div>
@@ -161,34 +167,72 @@ footer a { font-size: 12px; }
 <li>File creation and modification events via chokidar</li>
 <li>Editor project directory detection</li>
 <li>PowerShell command history capture</li>
+<li>Git commit messages, branch switches, and active branch (via <code>.git/logs/HEAD</code>)</li>
+<li>Clipboard snippets — sensitive patterns redacted, trimmed to 280 chars</li>
 <li>Auto-generated session summaries every 30 minutes per project</li>
 </ul>
 </div>
 
 <div class="section">
+<div class="section-label">Intelligence</div>
+<div class="arch-grid">
+<div class="arch-item"><div class="label">Dedup</div><div class="desc">Near-duplicate events (same source + normalized content within 10 min) are dropped before they hit the store or remote.</div></div>
+<div class="arch-item"><div class="label">Topics</div><div class="desc"><code>/context/topics</code> derives emergent topics from recent activity — frequent keywords, tags, and project names clustered automatically.</div></div>
+<div class="arch-item"><div class="label">Predict</div><div class="desc"><code>/context/predict</code> proactively surfaces memories and files relevant to a project or file path. Wire it into an editor extension for live context injection.</div></div>
+<div class="arch-item"><div class="label">Digest</div><div class="desc">At <code>DIGEST_HOUR</code> (local time) a markdown summary of the day is written to <code>~/.trace/digests/YYYY-MM-DD.md</code> and logged.</div></div>
+<div class="arch-item"><div class="label">Compact</div><div class="desc">Rotated JSONL archives are gzipped on demand via <code>POST /admin/compact</code> to save disk. Reads transparently decompress <code>.gz</code> files.</div></div>
+</div>
+</div>
+
+<div class="section">
+<div class="section-label">MCP integration</div>
+<p class="desc">Point your agent at <code>POST /mcp</code> with a tool name and args. Works with OpenCode, Claude Code, Cursor, and any MCP-compatible client.</p>
+<div class="endpoint">{ "tool": "search_context", "args": { "q": "what was I working on yesterday", "llm": true } }</div>
+<div class="endpoint-group">
+<div class="endpoint">get_current_context · search_context · get_day_context</div>
+<div class="endpoint">get_recent_files · recall_by_project · get_timeline_range</div>
+<div class="endpoint">get_topics · predict_context</div>
+</div>
+</div>
+
+<div class="section">
 <div class="section-label">API</div>
 <p class="desc">All endpoints return JSON. The server runs on port 6768.</p>
-<div class="endpoint">GET /context/current - active project, recent events, current session</div>
-<div class="endpoint">GET /context/query?q=...&llm=true - search memories with optional AI answer</div>
-<div class="endpoint">GET /context/chat?q=... - free-form AI chat (no activity context)</div>
-<div class="endpoint">GET /context/summary - LLM summary of last 2 hours of activity</div>
-<div class="endpoint">GET /context/day?date=2026-07-11 - full day with sessions grouped by project</div>
-<div class="endpoint">GET /health - service health and Supermemory status</div>
-<div class="endpoint">POST /admin/daemon/pause - pause activity capture</div>
-<div class="endpoint">POST /admin/daemon/resume - resume activity capture</div>
-<div class="endpoint">DELETE /admin/memories - clear all stored events</div>
-<div class="endpoint" style="margin-top:10px;color:#888;">POST /mcp with tool name and args for AI agent integration</div>
+<div class="endpoint">GET /context/current — active project, recent events, current session</div>
+<div class="endpoint">GET /context/query?q=...&llm=true — search memories with optional AI answer</div>
+<div class="endpoint">GET /context/chat?q=... — free-form AI chat (no activity context)</div>
+<div class="endpoint">GET /context/summary?since=... — LLM summary of recent activity</div>
+<div class="endpoint">GET /context/day?date=2026-07-11 — full day with sessions grouped by project</div>
+<div class="endpoint">GET /context/recent-files?limit=20 — most recently touched files</div>
+<div class="endpoint">GET /context/project?project=... — all memories for a project</div>
+<div class="endpoint">GET /context/timeline?start=ISO&end=ISO — every event in a time range</div>
+<div class="endpoint">GET /context/topics?limit=8 — emergent topics clustered from activity</div>
+<div class="endpoint">GET /context/predict?project=&path= — proactively relevant memories + files</div>
+<div class="endpoint">GET /health — service health and Supermemory status</div>
+<div class="endpoint">GET /admin/status — daemon + Supermemory status</div>
+<div class="endpoint">POST /admin/daemon/pause — pause activity capture</div>
+<div class="endpoint">POST /admin/daemon/resume — resume activity capture</div>
+<div class="endpoint">POST /admin/compact — gzip old JSONL archives</div>
+<div class="endpoint">DELETE /admin/memories — clear all stored events</div>
+<div class="endpoint" style="margin-top:10px;color:#888;">POST /mcp · GET /mcp/tools — AI agent integration</div>
 </div>
 
 <div class="section">
 <div class="section-label">Configuration</div>
 <p class="desc">Copy <code>.env.example</code> to <code>.env</code>. The server reads these variables at startup:</p>
-<div class="endpoint">SUPERMEMORY_URL - http://localhost:6767 (default)</div>
-<div class="endpoint">SUPERMEMORY_API_KEY - printed on first supermemory boot</div>
-<div class="endpoint">CONTAINER_TAG - namespace for your memories (default: trace)</div>
-<div class="endpoint">WATCH_SOURCES - comma-separated: filesystem, browser, editor, terminal</div>
-<div class="endpoint">WATCH_PATHS - semicolon-separated directories to monitor</div>
-<div class="endpoint">LLM_URL / LLM_MODEL / LLM_API_KEY - for AI-powered Q&A</div>
+<div class="endpoint">SUPERMEMORY_URL — http://localhost:6767 (default)</div>
+<div class="endpoint">SUPERMEMORY_API_KEY — printed on first supermemory boot</div>
+<div class="endpoint">CONTAINER_TAG — namespace for your memories (default: trace)</div>
+<div class="endpoint">WATCH_SOURCES — comma-separated: filesystem, browser, editor, terminal, clipboard</div>
+<div class="endpoint">WATCH_PATHS — semicolon-separated directories to monitor</div>
+<div class="endpoint">CHROME_HISTORY / EDGE_HISTORY / BRAVE_HISTORY — browser history paths (OS default)</div>
+<div class="endpoint">SHELL_HISTORY — terminal history path (PowerShell PSReadLine default)</div>
+<div class="endpoint">API_PORT — context API port (default: 6768)</div>
+<div class="endpoint">HUD_PORT — web HUD port (default: 6769)</div>
+<div class="endpoint">DIGEST_HOUR — local hour (0–23) to write the daily digest (default: 21)</div>
+<div class="endpoint">AUTO_UPDATE_CHECK — poll UPDATE_URL for newer releases (default: true)</div>
+<div class="endpoint">UPDATE_URL — JSON endpoint returning { version, url, notes }</div>
+<div class="endpoint">LLM_URL / LLM_MODEL / LLM_API_KEY — for AI-powered Q&amp;A</div>
 </div>
 
 <div class="section">
@@ -201,13 +245,23 @@ footer a { font-size: 12px; }
 </div>
 
 <div class="section">
+<div class="section-label">Resilience</div>
+<div class="arch-grid">
+<div class="arch-item"><div class="label">Watchdog</div><div class="desc"><code>npm run watchdog</code> runs a supervisor that restarts the server on unexpected exit. Crash-loop protection: max 5 restarts per minute.</div></div>
+<div class="arch-item"><div class="label">Auto-update</div><div class="desc">When <code>AUTO_UPDATE_CHECK=true</code> and <code>UPDATE_URL</code> is set, trace polls for a newer version and logs the result. Set <code>AUTO_UPDATE_DOWNLOAD=true</code> to also fetch the release asset into <code>./release</code>.</div></div>
+<div class="arch-item"><div class="label">Installer</div><div class="desc"><code>install.ps1</code> (Windows) and <code>install.sh</code> (WSL/Linux) install deps, build, configure <code>.env</code>, start Supermemory, and launch trace under the watchdog in one command.</div></div>
+<div class="arch-item"><div class="label">Binaries</div><div class="desc">The Electron overlay packages via <code>electron-builder</code> (<code>npm run dist:app</code>, produces <code>release/Trace Setup*.exe</code>). The server can be run via <code>node dist/index.js</code> or <code>npm run watchdog</code>.</div></div>
+</div>
+</div>
+
+<div class="section">
 <div class="section-label">Updates</div>
 <div class="timeline">
 <div class="entry"><div class="entry-date">Jul 13</div><div class="entry-desc"><strong>Code audit &amp; cleanup</strong> Removed dead code, deduplicated text/search helpers into shared modules used by both the server and the Electron UI, fixed <code>.gitignore</code> (release output, stale smt entries), and rewrote the README and landing page.</div></div>
-<div class="entry"><div class="entry-date">Jul 12</div><div class="entry-desc"><strong>Splash & lifecycle</strong> Boot splash screen with live startup progress (WSL detection, Supermemory status, daemon init). VBS scripts auto-elevate to admin and manage WSL Supermemory lifecycle directly. /stop kills Supermemory inside WSL. System app noise filtered from activity tracking. Supermemory metadata flattening fixes document ingestion. LLM query timeout reduced to 15s with graceful error handling.</div></div>
+<div class="entry"><div class="entry-date">Jul 12</div><div class="entry-desc"><strong>Splash &amp; lifecycle</strong> Boot splash screen with live startup progress (WSL detection, Supermemory status, daemon init). VBS scripts auto-elevate to admin and manage WSL Supermemory lifecycle directly. /stop kills Supermemory inside WSL. System app noise filtered from activity tracking. Supermemory metadata flattening fixes document ingestion. LLM query timeout reduced to 15s with graceful error handling.</div></div>
 <div class="entry"><div class="entry-date">Jul 11</div><div class="entry-desc"><strong>v0.1.0</strong> Renamed from smt to trace. Single-instance lock prevents duplicate launches. Local store scans all events for search. Supermemory uses v3/search with remoteOk flag. Chat-style overlay with logo in tray, search bar, spinner, HUD, and favicon. Comprehensive README and landing page.</div></div>
 <div class="entry"><div class="entry-date">Jul 11</div><div class="entry-desc"><strong>Chat AI</strong> Logo-based typing spinner. Escape returns to home view. LLM context includes recent events. Blur debounce at 300ms with focus cancellation. HUD with live event feed and session timeline.</div></div>
-<div class="entry"><div class="entry-date">Jul 11</div><div class="entry-desc"><strong>Search & AI</strong> Chat-style search bar. Enter to send, AI Q&A mode with message bubbles. Logo in search field. Server health check on startup with degraded mode fallback.</div></div>
+<div class="entry"><div class="entry-date">Jul 11</div><div class="entry-desc"><strong>Search &amp; AI</strong> Chat-style search bar. Enter to send, AI Q&amp;A mode with message bubbles. Logo in search field. Server health check on startup with degraded mode fallback.</div></div>
 <div class="entry"><div class="entry-date">Jul 11</div><div class="entry-desc"><strong>Unified Tracker</strong> Single persistent PowerShell process replaces separate activity.ts and browser.ts. Captures foreground switches, browser URLs (UI Automation), process snapshots, and idle detection on a 3-second loop with automatic restart on crash.</div></div>
 <div class="entry"><div class="entry-date">Jul 11</div><div class="entry-desc"><strong>Startup scripts</strong> start.bat and start.vbs for one-click launch. Server and Electron start in hidden windows. HUD port 6769 for browser-based monitoring.</div></div>
 <div class="entry"><div class="entry-date">Jul 10</div><div class="entry-desc"><strong>Redesign</strong> Electron overlay redesigned with greeting, background event fetch, and close-out animation. Summary endpoint with 5-minute cache. LLM-powered activity summaries. 5-second HUD polling.</div></div>

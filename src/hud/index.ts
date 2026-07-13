@@ -43,6 +43,21 @@ export function createHudServer(config: Config, supermemory: SupermemoryClient):
     } catch (err) { res.status(500).json({ error: String(err) }) }
   })
 
+  app.get('/api/topics', async (req: Request, res: Response) => {
+    try {
+      const limit = parseInt(req.query.limit as string, 10) || 8
+      res.json({ topics: await context.getTopics(limit) })
+    } catch (err) { res.status(500).json({ error: String(err) }) }
+  })
+
+  app.get('/api/predict', async (req: Request, res: Response) => {
+    try {
+      const project = (req.query.project as string) ?? undefined
+      const p = (req.query.path as string) ?? undefined
+      res.json(await context.predictContext(project, p))
+    } catch (err) { res.status(500).json({ error: String(err) }) }
+  })
+
   wss.on('connection', (ws: WebSocket) => {
     logger.debug('HUD WebSocket connected')
     const interval = setInterval(async () => {

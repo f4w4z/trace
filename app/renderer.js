@@ -526,7 +526,9 @@ function renderChatMessage(msg) {
 
   const memories = msg.memories || []
   if (memories.length) {
-    html += '<div class="msg-memories">'
+    const count = Math.min(memories.length, 6)
+    html += `<div class="msg-sources-toggle">Show sources (${count})</div>`
+    html += '<div class="msg-memories" style="display:none">'
     html += memories.slice(0, 6).map(m => {
       const s = m.source ?? m.metadata?.source ?? 'filesystem'
       const icon = ICONS[s] ?? '📄'
@@ -557,6 +559,18 @@ function renderChatMessage(msg) {
         el.querySelector('.msg-text-full').style.display = 'block'
       })
     }
+  }
+
+  const srcToggle = el.querySelector('.msg-sources-toggle')
+  if (srcToggle) {
+    const mem = el.querySelector('.msg-memories')
+    srcToggle.addEventListener('click', () => {
+      const open = mem.style.display !== 'none'
+      mem.style.display = open ? 'none' : 'flex'
+      srcToggle.textContent = open
+        ? srcToggle.textContent.replace('Hide', 'Show')
+        : srcToggle.textContent.replace('Show', 'Hide')
+    })
   }
 
   chat.appendChild(el)

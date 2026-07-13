@@ -1,4 +1,4 @@
-export type EventSource = 'filesystem' | 'browser' | 'editor' | 'terminal' | 'system' | 'media'
+export type EventSource = 'filesystem' | 'browser' | 'editor' | 'terminal' | 'system' | 'media' | 'clipboard'
 
 export type EventType =
   | 'file_opened'
@@ -7,6 +7,8 @@ export type EventType =
   | 'page_summary'
   | 'project_opened'
   | 'commit_made'
+  | 'branch_switch'
+  | 'repo_opened'
   | 'command_run'
   | 'error_logged'
   | 'app_focused'
@@ -17,6 +19,7 @@ export type EventType =
   | 'browser_scroll'
   | 'browser_focus'
   | 'track_change'
+  | 'clipboard_copy'
 
 export interface Event {
   id?: string
@@ -113,4 +116,7 @@ export interface Config {
   llmUrl?: string
   llmModel?: string
   llmApiKey?: string
+  digestHour: number
+  updateUrl?: string
+  autoUpdateCheck: boolean
 }

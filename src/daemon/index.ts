@@ -5,6 +5,8 @@ import { FilesystemWatcher } from './filesystem.js'
 import { EditorWatcher } from './editor.js'
 import { TerminalWatcher } from './terminal.js'
 import { SystemTracker } from './tracker.js'
+import { ClipboardWatcher } from './clipboard.js'
+import { BrowserHistoryWatcher } from './browser.js'
 
 export class Daemon {
   private config: Config
@@ -13,6 +15,8 @@ export class Daemon {
   private editor: EditorWatcher
   private terminal: TerminalWatcher
   private tracker: SystemTracker
+  private clipboard: ClipboardWatcher
+  private browser: BrowserHistoryWatcher
   private running = false
 
   constructor(config: Config, client: SupermemoryClient) {
@@ -22,6 +26,8 @@ export class Daemon {
     this.editor = new EditorWatcher(client)
     this.terminal = new TerminalWatcher(client)
     this.tracker = new SystemTracker(client)
+    this.clipboard = new ClipboardWatcher(client)
+    this.browser = new BrowserHistoryWatcher(client, config)
   }
 
   start(): void {
@@ -42,8 +48,12 @@ export class Daemon {
     if (this.config.watchSources.includes('terminal')) {
       this.terminal.start(this.config.shellHistory)
     }
+    if (this.config.watchSources.includes('clipboard')) {
+      this.clipboard.start()
+    }
     if (this.config.watchSources.includes('browser')) {
       logger.info('browser tracking is always active via system tracker')
+      this.browser.backfill().catch(err => logger.warn(`browser backfill error: ${err}`))
     }
 
     logger.info('daemon running')
@@ -57,6 +67,7 @@ export class Daemon {
     this.filesystem.stop()
     this.editor.stop()
     this.terminal.stop()
+    this.clipboard.stop()
     logger.info('daemon stopped')
   }
 

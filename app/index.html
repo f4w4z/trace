@@ -277,8 +277,17 @@ html, body {
   transition: color 0.1s;
 }
 .msg-more:hover { color: #fff; text-decoration: underline; }
+.msg-sources-toggle {
+  margin-top: 10px;
+  display: inline-block;
+  color: rgba(255,255,255,0.4);
+  cursor: pointer;
+  font-size: 12px;
+  transition: color 0.1s;
+}
+.msg-sources-toggle:hover { color: #fff; text-decoration: underline; }
 .msg-memories {
-  margin-top: 12px;
+  margin-top: 8px;
   display: flex;
   flex-direction: column;
   gap: 1px;
@@ -693,10 +702,12 @@ body.light .event-link {
 body.light .event-link:hover {
   color: #0369a1;
 }
-body.light .msg-more {
+body.light .msg-more,
+body.light .msg-sources-toggle {
   color: rgba(0,0,0,0.65);
 }
-body.light .msg-more:hover {
+body.light .msg-more:hover,
+body.light .msg-sources-toggle:hover {
   color: #000;
   text-decoration: underline;
 }

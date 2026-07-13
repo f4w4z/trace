@@ -9,12 +9,34 @@ export class SupermemoryClient {
   private containerTag: string
   private local: LocalStore
   remoteOk = false
+  private recentHashes: Map<string, number> = new Map()
+  private static DEDUP_WINDOW_MS = 10 * 60 * 1000
+  private static DEDUP_MAX = 2000
 
   constructor(baseUrl: string, apiKey: string, containerTag: string) {
     this.baseUrl = baseUrl.replace(/\/+$/, '')
     this.apiKey = apiKey
     this.containerTag = containerTag
     this.local = new LocalStore()
+  }
+
+  private dedupeKey(event: Event): string {
+    const norm = event.content.toLowerCase().replace(/\s+/g, ' ').trim()
+    return `${event.source}:${norm}`
+  }
+
+  private isDuplicate(event: Event): boolean {
+    const key = this.dedupeKey(event)
+    const now = Date.now()
+    const prev = this.recentHashes.get(key)
+    if (prev && now - prev < SupermemoryClient.DEDUP_WINDOW_MS) return true
+    this.recentHashes.set(key, now)
+    // bound memory: drop oldest entries once over the cap
+    if (this.recentHashes.size > SupermemoryClient.DEDUP_MAX) {
+      const firstKey = this.recentHashes.keys().next().value
+      if (firstKey !== undefined) this.recentHashes.delete(firstKey)
+    }
+    return false
   }
 
   private headers(): Record<string, string> {
@@ -28,6 +50,10 @@ export class SupermemoryClient {
   }
 
   async addDocument(event: Event): Promise<string | null> {
+    if (this.isDuplicate(event)) {
+      logger.debug(`dedup: skipping near-duplicate event (${event.source})`)
+      return null
+    }
     await this.local.append(event)
     if (this.remoteOk) {
       this.postWithRetry(event).catch(() => {})
@@ -45,6 +71,10 @@ export class SupermemoryClient {
 
   async listDocuments(limit = 100, _page = 1): Promise<SupermemoryMemory[]> {
     return this.local.list(limit)
+  }
+
+  async compact(): Promise<{ archived: number; bytesSaved: number }> {
+    return this.local.compact()
   }
 
   async deleteContainerTag(): Promise<boolean> {

@@ -94,6 +94,55 @@ export function createApi(config: Config, supermemory: SupermemoryClient, daemon
     }
   })
 
+  app.get('/context/recent-files', async (req: Request, res: Response) => {
+    try {
+      const limit = parseInt(req.query.limit as string, 10) || 20
+      res.json({ files: await context.getRecentFiles(limit) })
+    } catch (err) {
+      res.status(500).json({ error: String(err) })
+    }
+  })
+
+  app.get('/context/project', async (req: Request, res: Response) => {
+    try {
+      const project = (req.query.project as string) ?? ''
+      if (!project) { res.status(400).json({ error: 'project required' }); return }
+      res.json({ project, memories: await context.recallByProject(project) })
+    } catch (err) {
+      res.status(500).json({ error: String(err) })
+    }
+  })
+
+  app.get('/context/timeline', async (req: Request, res: Response) => {
+    try {
+      const start = (req.query.start as string) ?? ''
+      const end = (req.query.end as string) ?? ''
+      if (!start) { res.status(400).json({ error: 'start required' }); return }
+      res.json(await context.getTimelineRange(start, end))
+    } catch (err) {
+      res.status(500).json({ error: String(err) })
+    }
+  })
+
+  app.get('/context/topics', async (req: Request, res: Response) => {
+    try {
+      const limit = parseInt(req.query.limit as string, 10) || 8
+      res.json({ topics: await context.getTopics(limit) })
+    } catch (err) {
+      res.status(500).json({ error: String(err) })
+    }
+  })
+
+  app.get('/context/predict', async (req: Request, res: Response) => {
+    try {
+      const project = (req.query.project as string) ?? undefined
+      const p = (req.query.path as string) ?? undefined
+      res.json(await context.predictContext(project, p))
+    } catch (err) {
+      res.status(500).json({ error: String(err) })
+    }
+  })
+
   // Management
   app.get('/admin/status', async (_req: Request, res: Response) => {
     try {
@@ -128,6 +177,15 @@ export function createApi(config: Config, supermemory: SupermemoryClient, daemon
     }
   })
 
+  app.post('/admin/compact', async (_req: Request, res: Response) => {
+    try {
+      const result = await supermemory.compact()
+      res.json({ compacted: result.archived, bytesSaved: result.bytesSaved })
+    } catch (err) {
+      res.status(500).json({ error: String(err) })
+    }
+  })
+
   // MCP / OpenCode tool integration
   app.post('/mcp', async (req: Request, res: Response) => {
     try {
@@ -152,6 +210,35 @@ export function createApi(config: Config, supermemory: SupermemoryClient, daemon
           const date = (args?.date as string) ?? new Date().toISOString().slice(0, 10)
           const dayCtx = await context.getDayContext(date)
           res.json({ tool, result: dayCtx })
+          break
+        }
+        case 'get_recent_files': {
+          const limit = (args?.limit as number) ?? 20
+          res.json({ tool, result: { files: await context.getRecentFiles(limit) } })
+          break
+        }
+        case 'recall_by_project': {
+          const project = (args?.project ?? args?.q ?? '') as string
+          if (!project) { res.status(400).json({ tool, error: 'project required' }); break }
+          res.json({ tool, result: { project, memories: await context.recallByProject(project) } })
+          break
+        }
+        case 'get_timeline_range': {
+          const start = (args?.start ?? '') as string
+          const end = (args?.end as string) ?? ''
+          if (!start) { res.status(400).json({ tool, error: 'start required' }); break }
+          res.json({ tool, result: await context.getTimelineRange(start, end) })
+          break
+        }
+        case 'get_topics': {
+          const limit = (args?.limit as number) ?? 8
+          res.json({ tool, result: { topics: await context.getTopics(limit) } })
+          break
+        }
+        case 'predict_context': {
+          const project = (args?.project as string) ?? undefined
+          const p = (args?.path as string) ?? undefined
+          res.json({ tool, result: await context.predictContext(project, p) })
           break
         }
         default:
@@ -190,6 +277,60 @@ export function createApi(config: Config, supermemory: SupermemoryClient, daemon
             type: 'object',
             properties: {
               date: { type: 'string', description: 'YYYY-MM-DD (default: today)' },
+            },
+          },
+        },
+        {
+          name: 'get_recent_files',
+          description: 'List the most recently touched files with last-seen time and edit count',
+          schema: {
+            type: 'object',
+            properties: {
+              limit: { type: 'number', description: 'Max files to return (default 20)' },
+            },
+          },
+        },
+        {
+          name: 'recall_by_project',
+          description: 'Recall all memories associated with a specific project',
+          schema: {
+            type: 'object',
+            properties: {
+              project: { type: 'string', description: 'Project name' },
+            },
+            required: ['project'],
+          },
+        },
+        {
+          name: 'get_timeline_range',
+          description: 'Get every event between a start and end timestamp (ISO)',
+          schema: {
+            type: 'object',
+            properties: {
+              start: { type: 'string', description: 'ISO start timestamp' },
+              end: { type: 'string', description: 'ISO end timestamp (default: now)' },
+            },
+            required: ['start'],
+          },
+        },
+        {
+          name: 'get_topics',
+          description: 'Return emergent topics/clusters derived from recent activity',
+          schema: {
+            type: 'object',
+            properties: {
+              limit: { type: 'number', description: 'Max topics (default 8)' },
+            },
+          },
+        },
+        {
+          name: 'predict_context',
+          description: 'Proactively surface memories and files relevant to a project or path',
+          schema: {
+            type: 'object',
+            properties: {
+              project: { type: 'string', description: 'Project name' },
+              path: { type: 'string', description: 'File path to infer context from' },
             },
           },
         },

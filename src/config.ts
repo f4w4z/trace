@@ -40,7 +40,7 @@ export function loadConfig(): Config {
     supermemoryUrl: envStr('SUPERMEMORY_URL', 'http://localhost:6767'),
     apiKey: envStr('SUPERMEMORY_API_KEY', ''),
     containerTag: envStr('CONTAINER_TAG', 'trace'),
-    watchSources: envSources('WATCH_SOURCES', 'filesystem,editor,terminal'),
+    watchSources: envSources('WATCH_SOURCES', 'filesystem,editor,terminal,clipboard'),
     watchPaths: envPaths('WATCH_PATHS', ''),
     chromeHistory: envStr('CHROME_HISTORY', path.join(os.homedir(), 'AppData', 'Local', 'Google', 'Chrome', 'User Data', 'Default', 'History')),
     edgeHistory: envStr('EDGE_HISTORY', path.join(os.homedir(), 'AppData', 'Local', 'Microsoft', 'Edge', 'User Data', 'Default', 'History')),
@@ -51,5 +51,8 @@ export function loadConfig(): Config {
     llmUrl: process.env.LLM_URL || undefined,
     llmModel: process.env.LLM_MODEL || undefined,
     llmApiKey: process.env.LLM_API_KEY || undefined,
+    digestHour: envInt('DIGEST_HOUR', 21),
+    updateUrl: process.env.UPDATE_URL || undefined,
+    autoUpdateCheck: process.env.AUTO_UPDATE_CHECK ? process.env.AUTO_UPDATE_CHECK !== 'false' : true,
   }
 }

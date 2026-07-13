@@ -68,12 +68,15 @@ Copy `.env.example` to `.env`. Variables read at startup:
 | `SUPERMEMORY_URL` | `http://localhost:6767` | Supermemory Local endpoint |
 | `SUPERMEMORY_API_KEY` | _(empty)_ | Printed on first Supermemory boot |
 | `CONTAINER_TAG` | `trace` | Namespace for your memories |
-| `WATCH_SOURCES` | `filesystem,editor,terminal` | Comma-separated capture sources |
+| `WATCH_SOURCES` | `filesystem,editor,terminal,clipboard` | Comma-separated capture sources (`clipboard` records redacted copies) |
 | `WATCH_PATHS` | _(empty)_ | Semicolon-separated directories to monitor |
 | `CHROME_HISTORY` / `EDGE_HISTORY` / `BRAVE_HISTORY` | OS default | Browser history paths |
 | `SHELL_HISTORY` | PowerShell `PSReadLine` history | Terminal history path |
 | `API_PORT` | `6768` | Context API port |
 | `HUD_PORT` | `6769` | Web HUD port |
+| `DIGEST_HOUR` | `21` | Local hour (0-23) to write the daily markdown digest |
+| `AUTO_UPDATE_CHECK` | `true` | Poll `UPDATE_URL` for a newer release (report only) |
+| `UPDATE_URL` | _(empty)_ | JSON endpoint returning `{ version, url, notes }` |
 | `LLM_URL` / `LLM_MODEL` / `LLM_API_KEY` | _(empty)_ | OpenAI-compatible endpoint for AI Q&A |
 
 ## API
@@ -87,10 +90,16 @@ All endpoints return JSON. The server runs on port `6768`.
 | `/context/chat?q=...` | GET / POST | Free-form AI chat (no activity context) |
 | `/context/summary?since=...` | GET | LLM summary of recent activity |
 | `/context/day?date=YYYY-MM-DD` | GET | Full day with sessions grouped by project |
+| `/context/recent-files?limit=20` | GET | Most recently touched files |
+| `/context/project?project=...` | GET | All memories for a project |
+| `/context/timeline?start=ISO&end=ISO` | GET | Every event in a time range |
+| `/context/topics?limit=8` | GET | Emergent topics clustered from activity |
+| `/context/predict?project=&path=` | GET | Proactively relevant memories + files |
 | `/admin/status` | GET | Daemon + Supermemory status |
 | `/admin/daemon/pause` · `/admin/daemon/resume` | POST | Pause / resume ingestion |
+| `/admin/compact` | POST | Gzip old JSONL archives to save disk |
 | `/admin/memories` | DELETE | Clear all stored memories |
-| `/mcp` | POST | MCP tool integration (`get_current_context`, `search_context`, `get_day_context`) |
+| `/mcp` | POST | MCP tool integration |
 | `/mcp/tools` | GET | List available MCP tools |
 | `/health` | GET | Service health + Supermemory status |
 
@@ -102,7 +111,7 @@ Point your agent at `POST /mcp` with a tool name and args:
 { "tool": "search_context", "args": { "q": "what was I working on yesterday", "llm": true } }
 ```
 
-Tools: `get_current_context`, `search_context` (supports `llm`), `get_day_context`.
+Tools: `get_current_context`, `search_context` (supports `llm`), `get_day_context`, `get_recent_files`, `recall_by_project`, `get_timeline_range`, `get_topics`, `predict_context`.
 
 ## Deployment (Docker / WSL2)
 
@@ -136,5 +145,46 @@ site/                 public landing page
 | `npm run build` | Compile TypeScript to `dist/` |
 | `npm start` | Run compiled `dist/index.js` |
 | `npm run hud` | Start in HUD-only mode |
+| `npm run watchdog` | Run under supervisor that auto-restarts on crash |
+| `npm run build:bin` | Build standalone binaries via `pkg` (`npx pkg` fetches it) |
 | `npm run app` | Launch the Electron overlay |
 | `npm run lint` | Type-check with `tsc --noEmit` |
+
+## Capture sources
+
+- **filesystem / editor / terminal** — as before.
+- **git** — the editor watcher now records commit messages, branch switches, and the
+  active branch (via `.git/logs/HEAD` and `HEAD`).
+- **clipboard** — a Windows clipboard monitor records redacted snippets. Sensitive
+  patterns (passwords, tokens, private keys, cloud keys) are replaced with
+  `[REDACTED sensitive content]`; other copies are trimmed to 280 chars.
+
+## Intelligence features
+
+- **Semantic dedup** — near-duplicate events (same source + normalized content within
+  10 min) are dropped before they hit the store/remote.
+- **Topic clustering** — `/context/topics` derives emergent topics from recent activity
+  (frequent keywords + tags + project names).
+- **Predictive context** — `/context/predict` proactively surfaces memories and files
+  relevant to a project or file path; wire it into an editor extension for live context.
+- **Auto daily digest** — at `DIGEST_HOUR` (local) a markdown summary is written to
+  `~/.trace/digests/YYYY-MM-DD.md` and logged.
+- **Compaction** — rotated JSONL archives are gzipped on demand (`POST /admin/compact`)
+  to save disk; reads transparently decompress `.gz`.
+
+## Resilience & distribution
+
+- **Watchdog** — `npm run watchdog` runs a supervisor that restarts the server on
+  unexpected exit (crash-loop protection: max 5 restarts/min).
+- **Auto-update check** — if `AUTO_UPDATE_CHECK=true` and `UPDATE_URL` is set, trace
+  polls that JSON endpoint and logs when a newer version is available. Set
+  `AUTO_UPDATE_DOWNLOAD=true` to also fetch the release asset into `./release`
+  (manual/restart apply — the running binary is never replaced in place).
+- **One-command installer** — `install.ps1` (Windows) / `install.sh` (WSL/Linux) install
+  deps, build, configure `.env`, start Supermemory, and launch trace under the watchdog.
+- **Prebuilt binaries** — the Electron overlay packages with `electron-builder`
+  (`npm run dist:app`, produces `release/Trace Setup*.exe` etc.). For the server,
+  `npm run build:bin` invokes `pkg`; note: the project is ESM and uses
+  `import.meta.url`, which `pkg` 5.x does not virtualize as an entry — run the
+  server via `node dist/index.js` (or `npm run watchdog`) for now. A CommonJS
+  build target would make the standalone `pkg` binary work.

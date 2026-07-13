@@ -2,7 +2,8 @@ import type { SupermemoryClient } from '../supermemory.js'
 import type { CurrentContext, DayContext, Session, Event, QueryResult, SupermemoryMemory } from '../types.js'
 import { logger } from '../utils/logger.js'
 import { parseTimeRange } from '../utils/time.js'
-import { tokenizeQuery, expandSearchTerms } from '../utils/search.js'
+import { tokenizeQuery, expandSearchTerms, STOP_WORDS } from '../utils/search.js'
+import { extractProject } from '../utils/events.js'
 import { cleanTitle, getRelativeTime, findSpecificAnswer } from '../shared/text.js'
 
 export class ContextService {
@@ -139,6 +140,98 @@ ${items || '(no matching events found)'}`
     const sessions = this.groupIntoSessions(events)
     const summary = sessions.map(s => s.summary).filter(Boolean).join('\n')
     return { date: dateStr, sessions, eventCount: events.length, summary }
+  }
+
+  async getRecentFiles(limit = 20): Promise<{ path: string; app?: string; lastSeen: string; count: number }[]> {
+    const docs = await this.client.listDocuments(2000)
+    const byPath = new Map<string, { path: string; app?: string; lastSeen: number; count: number }>()
+    for (const d of docs) {
+      const md = d.metadata ?? {}
+      const p = (md.path as string) ?? ''
+      if (!p) continue
+      if (md.source !== 'filesystem' && md.source !== 'editor') continue
+      const ts = d.createdAt ? new Date(d.createdAt).getTime() : 0
+      const cur = byPath.get(p) ?? { path: p, app: md.app as string, lastSeen: 0, count: 0 }
+      cur.count++
+      if (ts > cur.lastSeen) cur.lastSeen = ts
+      byPath.set(p, cur)
+    }
+    return Array.from(byPath.values())
+      .sort((a, b) => b.lastSeen - a.lastSeen)
+      .slice(0, limit)
+      .map(f => ({ path: f.path, app: f.app, lastSeen: new Date(f.lastSeen).toISOString(), count: f.count }))
+  }
+
+  async recallByProject(project: string, limit = 25): Promise<SupermemoryMemory[]> {
+    const docs = await this.client.listDocuments(0)
+    const matches = docs.filter(d => {
+      if (this.isSummary(d)) return false
+      const md = d.metadata ?? {}
+      const tags = (md.tags as string[]) ?? []
+      return md.project === project || tags.includes(project)
+    })
+    return matches.slice(0, limit)
+  }
+
+  async getTimelineRange(startDate: string, endDate: string): Promise<{ start: string; end: string; eventCount: number; events: Event[] }> {
+    const startMs = new Date(startDate).getTime()
+    const endMs = endDate ? new Date(endDate).getTime() : Date.now()
+    const docs = await this.client.listDocuments(0)
+    const events = this.docsToEvents(docs).filter(e => {
+      const t = e.timestamp.getTime()
+      return t >= startMs && t <= endMs
+    })
+    return { start: startDate, end: endDate || new Date(endMs).toISOString(), eventCount: events.length, events }
+  }
+
+  async getTopics(limit = 8): Promise<{ name: string; count: number; sample: string[] }[]> {
+    const docs = await this.client.listDocuments(2000)
+    const events = this.docsToEvents(docs).filter(e => !this.isSummary(e))
+    const keywordEvents = new Map<string, Set<string>>()
+    const keywordCount = new Map<string, number>()
+    const TIME_TAGS = new Set(['morning', 'afternoon', 'night', 'code', 'document', 'command', 'error', 'browser'])
+
+    for (const e of events) {
+      const words = new Set<string>()
+      const contentWords = (e.content.toLowerCase().match(/[a-z][a-z0-9_]{3,}/g) ?? [])
+      for (const w of contentWords) words.add(w)
+      for (const t of (e.metadata.tags ?? [])) {
+        if (!TIME_TAGS.has(t)) words.add(t.toLowerCase())
+      }
+      if (e.metadata.project) words.add(String(e.metadata.project).toLowerCase())
+      for (const w of words) {
+        keywordCount.set(w, (keywordCount.get(w) ?? 0) + 1)
+        const set = keywordEvents.get(w) ?? new Set<string>()
+        set.add(e.content)
+        keywordEvents.set(w, set)
+      }
+    }
+
+    return Array.from(keywordCount.entries())
+      .filter(([w]) => !STOP_WORDS.has(w))
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, limit)
+      .map(([name, count]) => ({
+        name,
+        count,
+        sample: Array.from(keywordEvents.get(name) ?? []).slice(0, 3),
+      }))
+  }
+
+  async predictContext(project?: string, path?: string): Promise<{ project?: string; relatedMemories: SupermemoryMemory[]; suggestedFiles: string[] }> {
+    const key = project ?? (path ? extractProject(path) : undefined)
+    let relatedMemories: SupermemoryMemory[] = []
+    if (key) {
+      relatedMemories = await this.recallByProject(key, 15)
+    } else if (path) {
+      const name = path.split(/[\\/]/).pop() ?? path
+      relatedMemories = (await this.client.searchQuery(name, 15)).filter(d => !this.isSummary(d))
+    }
+    const files = await this.getRecentFiles(20)
+    const suggestedFiles = key
+      ? files.filter(f => f.path.replace(/\\/g, '/').includes(key.toLowerCase())).map(f => f.path)
+      : files.map(f => f.path)
+    return { project: key, relatedMemories: relatedMemories.slice(0, 10), suggestedFiles: suggestedFiles.slice(0, 10) }
   }
 
   private summaryCache: { text: string; stats: { apps: { name: string; events: number }[]; browsers: { app: string; titles: string[] }[]; files: string[]; total: number }; expiresAt: number } | null = null

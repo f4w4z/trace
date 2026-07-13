@@ -1,11 +1,13 @@
 import fs from 'fs'
 import path from 'path'
 import os from 'os'
+import zlib from 'zlib'
 import type { Event, SupermemoryMemory } from '../types.js'
 import { logger } from './logger.js'
 import { tokenizeQuery, expandSearchTerms } from './search.js'
 
 const DB_PATH = path.join(os.homedir(), '.trace', 'events.jsonl')
+const ARCHIVES = [DB_PATH + '.1', DB_PATH + '.2', DB_PATH + '.3']
 
 export class LocalStore {
   private ready: Promise<void>
@@ -54,12 +56,21 @@ export class LocalStore {
 
   private readLines(limit = 0): string[] {
     const lines: string[] = []
-    // Newest file first; read each file from end so limit returns newest events
-    const files = [DB_PATH, DB_PATH + '.1', DB_PATH + '.2', DB_PATH + '.3']
+    // Newest file first; read each file from end so limit returns newest events.
+    // Plain archives and their .gz-compressed counterparts are both honored.
+    const files: string[] = []
+    for (const base of [DB_PATH, DB_PATH + '.1', DB_PATH + '.2', DB_PATH + '.3']) {
+      if (fs.existsSync(base + '.gz')) files.push(base + '.gz')
+      else if (fs.existsSync(base)) files.push(base)
+    }
     for (const file of files) {
-      if (!fs.existsSync(file)) continue
       try {
-        const raw = fs.readFileSync(file, 'utf-8')
+        let raw: string
+        if (file.endsWith('.gz')) {
+          raw = zlib.gunzipSync(fs.readFileSync(file)).toString('utf-8')
+        } else {
+          raw = fs.readFileSync(file, 'utf-8')
+        }
         const fileLines = raw.split('\n').filter(Boolean)
         for (let i = fileLines.length - 1; i >= 0; i--) {
           const l = fileLines[i]
@@ -165,10 +176,40 @@ export class LocalStore {
     try {
       for (const file of [DB_PATH, DB_PATH + '.1', DB_PATH + '.2', DB_PATH + '.3']) {
         if (fs.existsSync(file)) fs.unlinkSync(file)
+        const gz = file + '.gz'
+        if (fs.existsSync(gz)) fs.unlinkSync(gz)
       }
       return true
     } catch {
       return false
     }
+  }
+
+  // Compaction: gzip rotated archive files (.1/.2/.3) into .gz to save disk.
+  // Returns how many archives were compressed and approximate bytes saved.
+  async compact(): Promise<{ archived: number; bytesSaved: number }> {
+    await this.ready
+    let archived = 0
+    let bytesSaved = 0
+    try {
+      for (const file of ARCHIVES) {
+        const gz = file + '.gz'
+        if (!fs.existsSync(file)) {
+          if (fs.existsSync(gz)) archived++ // already compressed
+          continue
+        }
+        const stat = fs.statSync(file)
+        const raw = fs.readFileSync(file)
+        const compressed = zlib.gzipSync(raw, { level: 9 })
+        fs.writeFileSync(gz, compressed)
+        fs.unlinkSync(file)
+        archived++
+        bytesSaved += stat.size - compressed.length
+        logger.info(`compacted ${path.basename(file)} → ${path.basename(gz)} (${(stat.size / 1024 | 0)}KB → ${(compressed.length / 1024 | 0)}KB)`)
+      }
+    } catch (err) {
+      logger.error(`compaction failed: ${err}`)
+    }
+    return { archived, bytesSaved }
   }
 }

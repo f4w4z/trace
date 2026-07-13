@@ -1,0 +1,18 @@
+appId: ai.trace.local
+productName: trace
+directories:
+  output: release
+  buildResources: app/assets
+files:
+  - app/**
+  - package.json
+  - dist/**
+  - README.md
+win:
+  target: nsis
+  icon: app/assets/logo-darkmode.png
+mac:
+  target: dmg
+linux:
+  target: AppImage
+  category: Utility

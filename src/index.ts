@@ -3,6 +3,8 @@ import { SupermemoryClient } from './supermemory.js'
 import { Daemon } from './daemon/index.js'
 import { createApi } from './api/index.js'
 import { createHudServer } from './hud/index.js'
+import { DigestScheduler } from './services/digest.js'
+import { checkForUpdate, downloadUpdate, applyDownloadedUpdate } from './utils/updater.js'
 import { logger } from './utils/logger.js'
 
 const config = loadConfig()
@@ -24,6 +26,15 @@ async function main(): Promise<void> {
   logger.info(`  containerTag: ${config.containerTag}`)
   logger.info(`  apiKey: ${config.apiKey ? 'set' : 'not set (optional for local)'}`)
 
+  if (config.autoUpdateCheck) {
+    checkForUpdate(config.updateUrl).then(async (release) => {
+      if (release && process.env.AUTO_UPDATE_DOWNLOAD === 'true') {
+        const dest = await downloadUpdate(release)
+        if (dest) applyDownloadedUpdate(dest)
+      }
+    }).catch(() => {})
+  }
+
   const healthy = await supermemory.healthCheck()
   if (!healthy) {
     logger.warn('supermemory local not reachable — start it on localhost:6767 first')
@@ -34,16 +45,22 @@ async function main(): Promise<void> {
 
   daemon.start()
 
+  const digest = new DigestScheduler(supermemory, config.digestHour)
+  digest.start()
+
   api.listen(config.apiPort, () => {
     logger.info(`context API at http://localhost:${config.apiPort}`)
     logger.info(`  GET  /context/current   — what you are doing now`)
     logger.info(`  GET  /context/chat?q=       — free-form AI chat (no activity context)`)
     logger.info(`  GET  /context/query?q=       — search your memories (?llm=true for Q&A)`)
     logger.info(`  GET  /context/day?date=  — daily summary`)
+    logger.info(`  GET  /context/topics      — emergent topics from activity`)
+    logger.info(`  GET  /context/predict     — proactively relevant context`)
     logger.info(`  POST /mcp                — MCP tool integration`)
     logger.info(`  GET  /mcp/tools           — list available MCP tools`)
     logger.info(`  POST /admin/daemon/pause  — pause ingestion`)
     logger.info(`  POST /admin/daemon/resume — resume ingestion`)
+    logger.info(`  POST /admin/compact       — gzip old archives`)
     logger.info(`  DELETE /admin/memories    — clear all memories`)
     logger.info(`  GET  /health             — service health`)
   })

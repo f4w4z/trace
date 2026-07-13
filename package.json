@@ -10,6 +10,10 @@
     "dev": "tsx watch src/index.ts",
     "lint": "tsc --noEmit",
     "hud": "node dist/index.js --hud-only",
+    "watchdog": "node dist/watchdog.js",
+    "test": "node --import tsx --test \"test/*.test.ts\"",
+    "build:bin": "npx pkg dist/index.js --targets node18-win-x64,node18-linux-x64,node18-macos-x64 --output release/trace",
+    "dist:app": "electron-builder",
     "app": "electron app/main.cjs"
   },
   "dependencies": {
@@ -28,5 +32,10 @@
     "electron": "^43.1.0",
     "tsx": "^4.19.3",
     "typescript": "^5.8.3"
+  },
+  "pkg": {
+    "scripts": "dist/**/*.js",
+    "assets": ["hud-ui/**/*", "app/**/*", "site/**/*"],
+    "targets": ["node18-win-x64", "node18-linux-x64", "node18-macos-x64"]
   }
 }

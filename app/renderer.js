@@ -436,7 +436,11 @@ async function sendMessage() {
     return
   }
 
-  if (!chatMode) enterChat()
+  if (!chatMode) {
+    // Starting from the home screen — always open a fresh conversation.
+    activeConv = null
+    enterChat()
+  }
 
   if (q.startsWith('/')) {
     const targetConv = activeConv

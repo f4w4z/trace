@@ -5,6 +5,8 @@ release/
 .env.docker
 .env.local
 *.log
+setup.log
+supermemory.log
 .trace/
 supermemory-data/
 .DS_Store

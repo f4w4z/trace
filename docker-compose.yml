@@ -11,6 +11,8 @@ services:
       - supermemory-data:/home/supermemory/data
     env_file:
       - .env.docker
+    environment:
+      - SUPERMEMORY_NO_PROMPT=1
     restart: unless-stopped
 
 volumes:

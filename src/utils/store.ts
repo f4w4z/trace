@@ -73,8 +73,7 @@ export class LocalStore {
         }
         const fileLines = raw.split('\n').filter(Boolean)
         for (let i = fileLines.length - 1; i >= 0; i--) {
-          const l = fileLines[i]
-          try { JSON.parse(l); lines.push(l) } catch { /* skip corrupt line */ }
+          lines.push(fileLines[i])
           if (limit > 0 && lines.length >= limit) break
         }
       } catch { /* skip unreadable file */ }
@@ -87,17 +86,20 @@ export class LocalStore {
     await this.ready
     try {
       const all = this.readLines(limit)
-      if (limit > 0 && all.length > limit) all.splice(limit)
-      return all.map(l => {
-        const e = JSON.parse(l)
-        return {
-          id: e.id,
-          content: e.content,
-          source: e.source,
-          metadata: { ...e.metadata, rawTimestamp: e.timestamp },
-          createdAt: e.timestamp,
-        } as SupermemoryMemory
-      })
+      const results: SupermemoryMemory[] = []
+      for (const l of all) {
+        try {
+          const e = JSON.parse(l)
+          results.push({
+            id: e.id,
+            content: e.content,
+            source: e.source,
+            metadata: { ...e.metadata, rawTimestamp: e.timestamp },
+            createdAt: e.timestamp,
+          } as SupermemoryMemory)
+        } catch { /* skip corrupt line */ }
+      }
+      return results
     } catch {
       return []
     }
@@ -116,67 +118,78 @@ export class LocalStore {
         return this.list(limit)
       }
 
-      // Scan up to 5,000 events if no range is specified, or all if range is specified
-      const scanLimit = startDate || endDate ? 0 : 50000
-      const all = this.readLines(scanLimit)
+      const all = this.readLines(0)
       const scoredDocs: { doc: SupermemoryMemory; score: number }[] = []
 
       for (let i = 0; i < all.length; i++) {
-        const e = JSON.parse(all[i])
-        const ts = e.timestamp ? new Date(e.timestamp).getTime() : 0
-        if (ts < startMs || ts > endMs) continue
-
-        const content = (e.content ?? '').toLowerCase()
-        const meta = JSON.stringify(e.metadata ?? {}).toLowerCase()
-        const app = (e.metadata?.app ?? e.source ?? '').toLowerCase()
-        const title = (e.metadata?.title ?? '').toLowerCase()
-        const source = (e.source ?? '').toLowerCase()
-
-        let matchCount = 0
-        let matchesAll = true
-
+        const line = all[i]
+        const lowerLine = line.toLowerCase()
+        let hasMatch = false
         for (const term of searchTerms) {
-          const isMatch = content.includes(term) || meta.includes(term) || app.includes(term) || title.includes(term) || source.includes(term)
-          if (isMatch) {
-            matchCount++
-          } else {
-            // Synonyms don't all need to match, but original terms should ideally match
-            if (terms.includes(term)) {
-              matchesAll = false
-            }
+          if (lowerLine.includes(term)) {
+            hasMatch = true
+            break
           }
         }
+        if (!hasMatch) continue
 
-        if (matchCount > 0) {
-          // Recency factor: newer events are near index 0
-          const recencyFactor = 1 - (i / all.length)
-          const matchesAllBonus = matchesAll ? 2.0 : 0.0
+        try {
+          const e = JSON.parse(line)
+          const ts = e.timestamp ? new Date(e.timestamp).getTime() : 0
+          if (ts < startMs || ts > endMs) continue
 
-          // Calculate length-weighted match ratio to favor rare/longer terms (proper nouns, filenames, URLs) over short ones
-          let matchedLength = 0
-          let totalLength = 0
+          const content = (e.content ?? '').toLowerCase()
+          const meta = JSON.stringify(e.metadata ?? {}).toLowerCase()
+          const app = (e.metadata?.app ?? e.source ?? '').toLowerCase()
+          const title = (e.metadata?.title ?? '').toLowerCase()
+          const source = (e.source ?? '').toLowerCase()
+
+          let matchCount = 0
+          let matchesAll = true
+
           for (const term of searchTerms) {
             const isMatch = content.includes(term) || meta.includes(term) || app.includes(term) || title.includes(term) || source.includes(term)
-            totalLength += term.length
             if (isMatch) {
-              matchedLength += term.length
+              matchCount++
+            } else {
+              // Synonyms don't all need to match, but original terms should ideally match
+              if (terms.includes(term)) {
+                matchesAll = false
+              }
             }
           }
-          const lengthWeight = totalLength > 0 ? (matchedLength / totalLength) : 0
 
-          const score = lengthWeight * 10.0 + matchesAllBonus + recencyFactor
+          if (matchCount > 0) {
+            // Recency factor: newer events are near index 0
+            const recencyFactor = 1 - (i / all.length)
+            const matchesAllBonus = matchesAll ? 2.0 : 0.0
 
-          scoredDocs.push({
-            doc: {
-              id: e.id,
-              content: e.content,
-              source: e.source,
-              metadata: { ...e.metadata, rawTimestamp: e.timestamp },
-              createdAt: e.timestamp,
-            } as SupermemoryMemory,
-            score
-          })
-        }
+            // Calculate length-weighted match ratio to favor rare/longer terms (proper nouns, filenames, URLs) over short ones
+            let matchedLength = 0
+            let totalLength = 0
+            for (const term of searchTerms) {
+              const isMatch = content.includes(term) || meta.includes(term) || app.includes(term) || title.includes(term) || source.includes(term)
+              totalLength += term.length
+              if (isMatch) {
+                matchedLength += term.length
+              }
+            }
+            const lengthWeight = totalLength > 0 ? (matchedLength / totalLength) : 0
+
+            const score = lengthWeight * 10.0 + matchesAllBonus + recencyFactor
+
+            scoredDocs.push({
+              doc: {
+                id: e.id,
+                content: e.content,
+                source: e.source,
+                metadata: { ...e.metadata, rawTimestamp: e.timestamp },
+                createdAt: e.timestamp,
+              } as SupermemoryMemory,
+              score
+            })
+          }
+        } catch { /* skip corrupt line */ }
       }
 
       scoredDocs.sort((a, b) => b.score - a.score)

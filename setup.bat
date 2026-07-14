@@ -102,6 +102,7 @@ if "!HAS_KEY!"=="0" (
         (echo # Add your API key below, then remove the # in front of it:) > ".env.docker"
         (echo # GROQ_API_KEY=your_key_here) >> ".env.docker"
     ) else (
+        set "PROVIDER_CHOICE="
         set /p "PROVIDER_CHOICE=  Groq, OpenAI, Anthropic, or Gemini? [Groq]:  "
         if /i "!PROVIDER_CHOICE!"=="" set "KEY_NAME=GROQ_API_KEY"
         if /i "!PROVIDER_CHOICE!"=="groq" set "KEY_NAME=GROQ_API_KEY"
@@ -112,9 +113,14 @@ if "!HAS_KEY!"=="0" (
         (echo # Docker-specific env overrides) > ".env.docker"
         (echo !KEY_NAME!=!SM_KEY!) >> ".env.docker"
         echo   %OK% Key saved
+
+        :: Also configure the app's built-in Q&A to use the same key
+        call :configure_llm "!KEY_NAME!" "!SM_KEY!"
     )
 ) else (
     echo   %OK% Already connected
+    :: If .env exists but LLM is not configured, try to auto-detect from .env.docker
+    call :ensure_llm_from_docker
 )
 echo.
 
@@ -183,3 +189,52 @@ echo   Look for the Trace icon in your system tray.
 echo   Press Alt+X anytime to open it.
 echo.
 timeout /t 5
+goto :eof
+
+:: =================================================================
+::  Subroutines
+:: =================================================================
+
+:configure_llm
+:: %1 = key name (e.g. GROQ_API_KEY), %2 = key value
+set "_llm_name=%~1"
+set "_llm_key=%~2"
+set "_llm_url="
+set "_llm_model="
+
+if /i "!_llm_name!"=="GROQ_API_KEY" (
+    set "_llm_url=https://api.groq.com/openai/v1"
+    set "_llm_model=llama-3.3-70b-versatile"
+)
+if /i "!_llm_name!"=="OPENAI_API_KEY" (
+    set "_llm_url=https://api.openai.com/v1"
+    set "_llm_model=gpt-4o"
+)
+if /i "!_llm_name!"=="GEMINI_API_KEY" (
+    set "_llm_url=https://generativelanguage.googleapis.com/v1beta/openai"
+    set "_llm_model=gemini-2.0-flash"
+)
+
+if not defined _llm_url goto :eof
+
+powershell -NoProfile -Command "$f = Get-Content '.env' -Raw; $f = $f -replace '(?m)^LLM_URL=.*$', 'LLM_URL=!_llm_url!'; $f = $f -replace '(?m)^LLM_MODEL=.*$', 'LLM_MODEL=!_llm_model!'; $f = $f -replace '(?m)^LLM_API_KEY=.*$', 'LLM_API_KEY=!_llm_key!'; Set-Content '.env' $f -NoNewline"
+echo   %OK% Q&A enabled with !_llm_model!
+goto :eof
+
+:ensure_llm_from_docker
+:: If .env LLM vars are empty but .env.docker has a key, configure LLM
+if not exist ".env" goto :eof
+findstr /r "^LLM_URL=https://" ".env" >nul 2>&1
+if !errorlevel! equ 0 goto :eof
+
+:: LLM not configured — try to detect from .env.docker
+if not exist ".env.docker" goto :eof
+set "_detected_key="
+set "_detected_name="
+for /f "tokens=1,* delims==" %%a in ('findstr /r "^[A-Z_]*API_KEY=." ".env.docker"') do (
+    set "_detected_name=%%a"
+    set "_detected_key=%%b"
+)
+if not defined _detected_key goto :eof
+call :configure_llm "!_detected_name!" "!_detected_key!"
+goto :eof

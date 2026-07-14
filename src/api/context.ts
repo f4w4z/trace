@@ -41,7 +41,7 @@ export class ContextService {
     const vectorResults = (await this.client.searchQuery(sanitized, 30, { startDate, endDate })).filter(d => !this.isSummary(d))
 
     // Recent docs for keyword matching (full scan when time-range is specified)
-    const recent = (await this.client.listDocuments(startDate || endDate ? 0 : 2000)).filter(d => !this.isSummary(d))
+    const recent = (await this.client.listDocuments(startDate || endDate ? 0 : 10000)).filter(d => !this.isSummary(d))
 
     // Time-filter recent docs if we have a time range
     let candidates = recent

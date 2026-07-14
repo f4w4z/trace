@@ -117,7 +117,7 @@ export class LocalStore {
       }
 
       // Scan up to 5,000 events if no range is specified, or all if range is specified
-      const scanLimit = startDate || endDate ? 0 : 5000
+      const scanLimit = startDate || endDate ? 0 : 50000
       const all = this.readLines(scanLimit)
       const scoredDocs: { doc: SupermemoryMemory; score: number }[] = []
 

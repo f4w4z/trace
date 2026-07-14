@@ -32,7 +32,16 @@ window.trace.username().then(name => {
   renderGreeting()
 })
 
+function playOpenAnimation() {
+  const w = document.getElementById('window')
+  if (!w) return
+  w.classList.remove('opening', 'closing')
+  void w.offsetWidth
+  w.classList.add('opening')
+}
+
 window.trace.onFocusSearch(() => {
+  playOpenAnimation()
   setTimeout(() => input.focus(), 50)
   renderGreeting(true)
   const now = Date.now()
@@ -155,11 +164,11 @@ async function renderConversations() {
     return
   }
   convSection.classList.add('visible')
-  convList.innerHTML = list.map(c => {
+  convList.innerHTML = list.map((c, i) => {
     const title = c.title || 'New conversation'
     const date = formatTimestamp(c.createdAt)
     const preview = c.preview ? escape(c.preview).slice(0, 60) : ''
-    return `<div class="conv-entry" data-id="${c.id}">
+    return `<div class="conv-entry" data-id="${c.id}" style="animation-delay:${(i % 12) * 0.035}s">
       <div class="conv-entry-icon">💬</div>
       <div class="conv-entry-body">
         <div class="conv-entry-title">${escape(title)}</div>
@@ -648,8 +657,7 @@ function showTyping() {
   el.id = 'typing-indicator'
   const isLight = document.body.classList.contains('light')
   const logoPath = isLight ? 'assets/logo-lightmode.png' : 'assets/logo-darkmode.png'
-  const logo = `<img class="typing-logo" src="${logoPath}">`
-  el.innerHTML = `<div class="typing-line">${logo}<span class="shimmer">thinking</span></div>`
+  el.innerHTML = `<div class="typing-line"><img class="typing-logo" src="${logoPath}"><div class="typing-dots"><span></span><span></span><span></span></div></div>`
   chat.appendChild(el)
 }
 

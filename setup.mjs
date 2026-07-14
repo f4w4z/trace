@@ -351,6 +351,25 @@ function checkDocker() {
   }
 }
 
+function launchDocker() {
+  const candidates = [
+    path.join(os.homedir(), "AppData", "Local", "Docker", "Docker", "Docker Desktop.exe"),
+    "C:\\Program Files\\Docker\\Docker\\Docker Desktop.exe",
+    "C:\\Program Files (x86)\\Docker\\Docker\\Docker Desktop.exe",
+  ];
+  for (const exe of candidates) {
+    if (fs.existsSync(exe)) {
+      try {
+        spawn(exe, [], { shell: true, windowsHide: true, detached: true, stdio: "ignore" });
+        return true;
+      } catch {
+        /* try next */
+      }
+    }
+  }
+  return false;
+}
+
 function setupConfig() {
   const env = path.join(ROOT, ".env");
   const example = path.join(ROOT, ".env.example");
@@ -473,11 +492,20 @@ async function main() {
 
   // 2. Docker
   await step("Checking for Docker Desktop…", async () => {
-    if (!checkDocker()) {
+    if (checkDocker()) return;
+    console.log("  " + C.dim + "Docker isn't running — trying to open it…" + C.reset);
+    if (!launchDocker()) {
       throw new Error(
-        "Docker Desktop isn't running. Open it, wait a few seconds, then run setup again."
+        "Couldn't find Docker Desktop. Install it from https://www.docker.com/products/docker-desktop/, then run setup again."
       );
     }
+    for (let i = 0; i < 40; i++) {
+      await sleep(3000);
+      if (checkDocker()) return;
+    }
+    throw new Error(
+      "Docker Desktop didn't start in time. Open it manually, wait a few seconds, then run setup again."
+    );
   });
 
   // 3. Config

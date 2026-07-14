@@ -3,156 +3,208 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>trace - local context cloud</title>
-<meta name="description" content="trace gives your AI assistants a persistent memory of what you do on your computer. Captures activity locally, indexes with Supermemory, exposes via chat overlay and API.">
+<title>trace — your memory, on your machine</title>
+<meta name="description" content="trace quietly remembers what you do on your computer — files, tabs, commands — and lets you ask about any of it later in plain language. Local-first and private.">
+<link rel="icon" href="assets/logo.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
+:root {
+  --bg: #0b0b0e;
+  --surface: rgba(255,255,255,0.03);
+  --surface2: rgba(255,255,255,0.05);
+  --border: rgba(255,255,255,0.08);
+  --text: #f5f5f7;
+  --text2: rgba(245,245,247,0.55);
+  --text3: rgba(245,245,247,0.32);
+  --accent: #6366f1;
+  --radius: 12px;
+}
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body {
-  background: #0a0a0a;
-  color: #d4d4d4;
-  font-family: 'Inter', sans-serif;
+  background:
+    radial-gradient(120% 70% at 50% -10%, rgba(99,102,241,0.10), transparent 60%),
+    var(--bg);
+  color: var(--text);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
   font-weight: 400;
   font-size: 14px;
   line-height: 1.7;
-  padding: 80px 24px;
-  max-width: 680px;
-  margin: 0 auto;
+  padding: 0 24px 100px;
+  -webkit-font-smoothing: antialiased;
 }
-header { margin-bottom: 56px; }
+.wrap { max-width: 720px; margin: 0 auto; }
+
+/* Nav */
+nav {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 22px 0;
+  margin-bottom: 40px;
+}
+.brand { display: flex; align-items: center; gap: 9px; font-size: 16px; font-weight: 600; letter-spacing: -0.3px; }
+.brand-logo { width: 26px; height: 26px; border-radius: 7px; }
+.nav-links { display: flex; gap: 22px; }
+.nav-links a {
+  color: var(--text2); text-decoration: none; font-size: 13px; font-weight: 500;
+  transition: color 0.15s ease;
+}
+.nav-links a:hover { color: var(--text); }
+
+/* Hero */
+.hero { margin-bottom: 64px; }
+.badge {
+  display: inline-block;
+  font-size: 11px; font-weight: 600; letter-spacing: 0.04em;
+  color: var(--accent);
+  background: rgba(99,102,241,0.10);
+  border: 1px solid rgba(99,102,241,0.22);
+  padding: 4px 11px; border-radius: 20px;
+  margin-bottom: 18px;
+}
 h1 {
-  font-size: 20px;
-  font-weight: 500;
-  color: #f0f0f0;
-  letter-spacing: -0.3px;
-  margin-bottom: 12px;
+  font-size: 44px; font-weight: 700; line-height: 1.08;
+  letter-spacing: -1.2px; color: var(--text);
+  margin-bottom: 18px;
 }
-h1 span { font-weight: 300; color: #555; }
-p { color: #888; max-width: 560px; }
-a { color: #999; text-decoration: none; border-bottom: 1px solid #222; }
-a:hover { color: #d4d4d4; border-color: #555; }
-code {
-  font-family: 'Inter', monospace;
-  font-size: 12.5px;
-  background: #111;
-  padding: 1px 6px;
-  border-radius: 3px;
-  color: #b0b0b0;
+.lede {
+  font-size: 16px; line-height: 1.65; color: var(--text2);
+  max-width: 580px;
 }
-.section {
-  margin-bottom: 56px;
-}
+
+/* Sections */
+.section { margin-bottom: 52px; }
 .section-label {
-  font-size: 11px;
-  font-weight: 500;
-  color: #3a3a3a;
-  text-transform: uppercase;
-  letter-spacing: 1.5px;
-  margin-bottom: 20px;
+  font-size: 11px; font-weight: 600;
+  color: var(--accent);
+  text-transform: uppercase; letter-spacing: 0.08em;
+  margin-bottom: 18px;
 }
-.desc { font-size: 14px; color: #888; }
-.desc + .desc { margin-top: 14px; }
-.timeline { margin-bottom: 0; }
+.desc { font-size: 14px; color: var(--text2); }
+.desc + .desc { margin-top: 12px; }
+.desc strong { color: var(--text); font-weight: 600; }
+
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+code {
+  font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+  font-size: 12.5px;
+  background: var(--surface2);
+  padding: 1px 6px; border-radius: 4px;
+  color: #c8c8d2;
+}
+
+/* Cards (arch / intelligence / resilience) */
+.arch-grid { display: flex; flex-direction: column; gap: 10px; }
+.arch-item {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px 18px;
+}
+.arch-item .label {
+  display: inline-block;
+  font-size: 11px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.06em;
+  color: var(--accent);
+  margin-bottom: 8px;
+}
+.arch-item .desc { font-size: 13.5px; color: var(--text2); line-height: 1.6; }
+
+/* Feature list */
+.feature-list { list-style: none; margin-top: 4px; }
+.feature-list li {
+  font-size: 13.5px; color: var(--text2);
+  padding: 7px 0 7px 18px; position: relative;
+  border-bottom: 1px solid var(--border);
+}
+.feature-list li:last-child { border-bottom: none; }
+.feature-list li::before {
+  content: ''; position: absolute; left: 0; top: 15px;
+  width: 5px; height: 5px; border-radius: 50%;
+  background: var(--accent);
+}
+
+/* Endpoint / reference blocks */
+.endpoint {
+  font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+  font-size: 12.5px; color: var(--text2);
+  padding: 7px 14px;
+  border-bottom: 1px solid var(--border);
+}
+.endpoint:first-of-type { border-radius: var(--radius) var(--radius) 0 0; }
+.endpoint:last-of-type { border-bottom: none; border-radius: 0 0 var(--radius) var(--radius); }
+.endpoint-group {
+  margin-top: 10px; padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+.ref-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  margin-top: 12px;
+}
+.ref-card .endpoint { background: transparent; }
+
+/* Updates timeline */
+.timeline { display: flex; flex-direction: column; }
 .entry {
-  display: flex;
-  gap: 16px;
-  padding: 14px 0;
-  border-bottom: 1px solid #121212;
+  display: flex; gap: 18px;
+  padding: 14px 0; border-bottom: 1px solid var(--border);
 }
 .entry:last-child { border-bottom: none; }
 .entry-date {
-  font-size: 12px;
-  color: #444;
-  width: 80px;
-  flex-shrink: 0;
-  padding-top: 2px;
+  font-size: 12px; color: var(--text3);
+  width: 54px; flex-shrink: 0; padding-top: 2px;
+  font-variant-numeric: tabular-nums;
 }
-.entry-desc {
-  font-size: 13px;
-  color: #a0a0a0;
-}
-.entry-desc strong {
-  font-weight: 500;
-  color: #ddd;
-}
-.feature-list {
-  list-style: none;
-  margin-top: 4px;
-}
-.feature-list li {
-  font-size: 13px;
-  color: #777;
-  padding: 3px 0;
-  padding-left: 14px;
-  position: relative;
-}
-.feature-list li::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 10px;
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: #222;
-}
-.arch-grid { margin-bottom: 0; }
-.arch-item {
-  display: flex;
-  gap: 16px;
-  padding: 10px 0;
-  border-bottom: 1px solid #121212;
-}
-.arch-item:last-child { border-bottom: none; }
-.arch-item .label {
-  font-size: 12px;
-  color: #555;
-  width: 80px;
-  flex-shrink: 0;
-  padding-top: 1px;
-}
-.arch-item .desc { font-size: 13px; color: #999; }
-.endpoint {
-  font-size: 12.5px;
-  color: #777;
-  padding: 4px 0;
-  font-family: 'Inter', monospace;
-}
-.endpoint-group {
-  margin-top: 10px;
-  padding-top: 10px;
-  border-top: 1px solid #121212;
-}
+.entry-desc { font-size: 13.5px; color: var(--text2); line-height: 1.6; }
+.entry-desc strong { font-weight: 600; color: var(--text); }
+
+/* Footer */
 footer {
-  margin-top: 80px;
-  padding-top: 20px;
-  border-top: 1px solid #121212;
-  font-size: 12px;
-  color: #444;
+  margin-top: 80px; padding-top: 24px;
+  border-top: 1px solid var(--border);
+  font-size: 13px; color: var(--text3);
+  display: flex; gap: 20px;
 }
-footer a { font-size: 12px; }
+
+@media (max-width: 560px) {
+  h1 { font-size: 34px; }
+  .entry { flex-direction: column; gap: 4px; }
+}
 </style>
 </head>
 <body>
+<div class="wrap">
 
-<header>
-<h1>trace <span>your memory, on your machine</span></h1>
-<p>Trace quietly remembers what you do on your computer — the files you touch, the tabs you open, the commands you run — and lets you ask about any of it later in plain language. Everything stays local. Nothing leaves your machine unless you point it at an AI.</p>
-</header>
+<nav>
+  <div class="brand"><img class="brand-logo" src="assets/logo.png" alt=""> trace</div>
+  <div class="nav-links">
+    <a href="https://github.com/f4w4z/trace">GitHub</a>
+    <a href="https://supermemory.ai">Supermemory</a>
+  </div>
+</nav>
+
+<section class="hero">
+  <div class="badge">Local-first · Private by design</div>
+  <h1>Your memory,<br>on your machine.</h1>
+  <p class="lede">Trace quietly remembers what you do on your computer — the files you touch, the tabs you open, the commands you run — and lets you ask about any of it later in plain language. Nothing leaves your machine unless you point it at an AI.</p>
+</section>
 
 <div class="section">
 <div class="section-label">Why</div>
-<p class="desc">Every time you ask an AI about your work, it has no idea what you've been doing. The files you edited, the terminal commands you ran, the browser tabs you had open, the project you were focused on. Trace bridges that gap by recording activity as structured events, indexing them into a searchable memory graph, and letting you query everything with natural language. It runs entirely on your machine. Nothing leaves.</p>
+<p class="desc">Every time you ask an AI about your work, it has no idea what you've been doing. The files you edited, the terminal commands you ran, the browser tabs you had open, the project you were focused on. Trace bridges that gap by keeping a private, searchable record of your activity and letting you query it all with natural language. It runs entirely on your machine.</p>
 </div>
 
 <div class="section">
 <div class="section-label">How it works</div>
 <div class="arch-grid">
-<div class="arch-item"><div class="label">Capture</div><div class="desc">A persistent PowerShell process streams what you do: foreground window changes, browser URLs (via UI Automation), running processes, and idle state. Separate watchers track file edits, editor projects, terminal commands, git activity, and clipboard. All events are timestamped and tagged with source, app, and project context.</div></div>
-<div class="arch-item"><div class="label">Store</div><div class="desc">Every event is written immediately to <code>~/.trace/events.jsonl</code> and asynchronously posted to Supermemory Local on port 6767 for chunking, embedding, and indexing. The local file acts as the source of truth. Supermemory provides hybrid vector-keyword search. If Supermemory is down, all queries fall back to full substring scan of the local file.</div></div>
-<div class="arch-item"><div class="label">Query</div><div class="desc">An Express server on port 6768 exposes REST endpoints for context retrieval, search, daily summaries, and MCP-compatible tools for AI agents. An LLM-powered Q&amp;A mode sends your query plus relevant memories to any OpenAI-compatible endpoint (OpenRouter, OpenAI, Ollama, etc.) and returns a natural language answer citing specific apps, files, and URLs.</div></div>
-<div class="arch-item"><div class="label">Access</div><div class="desc">Press Alt+X to open a calm chat overlay where you can ask questions and get answers in plain language. A web view on port 6769 offers the same search experience. The API can be used directly, or through MCP tools integrated into OpenCode, Claude Code, Cursor, and other AI coding assistants.</div></div>
+<div class="arch-item"><div class="label">Capture</div><div class="desc">A persistent process quietly streams what you do — foreground windows, browser pages, file edits, terminal commands, git activity, and clipboard — all tagged with source, app, and project.</div></div>
+<div class="arch-item"><div class="label">Store</div><div class="desc">Everything is written to <code>~/.trace/events.jsonl</code> on your disk and indexed locally with Supermemory for fast, private search. Your data stays yours.</div></div>
+<div class="arch-item"><div class="label">Ask</div><div class="desc">Press <code>Alt+X</code> to open a calm overlay and ask in plain language — “what was I working on yesterday?” Trace finds the answer and shows its sources.</div></div>
+<div class="arch-item"><div class="label">Access</div><div class="desc">The same experience is available as a web view, a REST API, and MCP tools you can plug into OpenCode, Claude Code, Cursor, and other AI assistants.</div></div>
 </div>
 </div>
 
@@ -173,19 +225,18 @@ footer a { font-size: 12px; }
 <div class="section">
 <div class="section-label">Intelligence</div>
 <div class="arch-grid">
-<div class="arch-item"><div class="label">Dedup</div><div class="desc">Near-duplicate events (same source + normalized content within 10 min) are dropped before they hit the store or remote.</div></div>
-<div class="arch-item"><div class="label">Topics</div><div class="desc"><code>/context/topics</code> derives emergent topics from recent activity — frequent keywords, tags, and project names clustered automatically.</div></div>
-<div class="arch-item"><div class="label">Predict</div><div class="desc"><code>/context/predict</code> proactively surfaces memories and files relevant to a project or file path. Wire it into an editor extension for live context injection.</div></div>
-<div class="arch-item"><div class="label">Digest</div><div class="desc">At <code>DIGEST_HOUR</code> (local time) a markdown summary of the day is written to <code>~/.trace/digests/YYYY-MM-DD.md</code> and logged.</div></div>
-<div class="arch-item"><div class="label">Compact</div><div class="desc">Rotated JSONL archives are gzipped on demand via <code>POST /admin/compact</code> to save disk. Reads transparently decompress <code>.gz</code> files.</div></div>
+<div class="arch-item"><div class="label">Dedup</div><div class="desc">Near-duplicate activity is folded together so your memory stays clean and relevant.</div></div>
+<div class="arch-item"><div class="label">Topics</div><div class="desc"><code>/context/topics</code> surfaces the themes you've been working on, clustered automatically from recent activity.</div></div>
+<div class="arch-item"><div class="label">Predict</div><div class="desc"><code>/context/predict</code> proactively surfaces memories and files relevant to whatever you're working on next.</div></div>
+<div class="arch-item"><div class="label">Digest</div><div class="desc">A quiet daily summary of your day is written to <code>~/.trace/digests/YYYY-MM-DD.md</code>.</div></div>
 </div>
 </div>
 
 <div class="section">
 <div class="section-label">MCP integration</div>
 <p class="desc">Point your agent at <code>POST /mcp</code> with a tool name and args. Works with OpenCode, Claude Code, Cursor, and any MCP-compatible client.</p>
+<div class="ref-card">
 <div class="endpoint">{ "tool": "search_context", "args": { "q": "what was I working on yesterday", "llm": true } }</div>
-<div class="endpoint-group">
 <div class="endpoint">get_current_context · search_context · get_day_context</div>
 <div class="endpoint">get_recent_files · recall_by_project · get_timeline_range</div>
 <div class="endpoint">get_topics · predict_context</div>
@@ -194,83 +245,79 @@ footer a { font-size: 12px; }
 
 <div class="section">
 <div class="section-label">API</div>
-<p class="desc">All endpoints return JSON. The server runs on port 6768.</p>
-<div class="endpoint">GET /context/current — active project, recent events, current session</div>
+<p class="desc">All endpoints return JSON. The server runs locally on port 6768.</p>
+<div class="ref-card">
+<div class="endpoint">GET /context/current — active project, recent activity, current session</div>
 <div class="endpoint">GET /context/query?q=...&llm=true — search memories with optional AI answer</div>
 <div class="endpoint">GET /context/chat?q=... — free-form AI chat (no activity context)</div>
-<div class="endpoint">GET /context/summary?since=... — LLM summary of recent activity</div>
+<div class="endpoint">GET /context/summary?since=... — AI summary of recent activity</div>
 <div class="endpoint">GET /context/day?date=2026-07-11 — full day with sessions grouped by project</div>
 <div class="endpoint">GET /context/recent-files?limit=20 — most recently touched files</div>
 <div class="endpoint">GET /context/project?project=... — all memories for a project</div>
-<div class="endpoint">GET /context/timeline?start=ISO&end=ISO — every event in a time range</div>
-<div class="endpoint">GET /context/topics?limit=8 — emergent topics clustered from activity</div>
+<div class="endpoint">GET /context/timeline?start=ISO&end=ISO — activity in a time range</div>
+<div class="endpoint">GET /context/topics?limit=8 — emergent topics from activity</div>
 <div class="endpoint">GET /context/predict?project=&path= — proactively relevant memories + files</div>
 <div class="endpoint">GET /health — service health and Supermemory status</div>
 <div class="endpoint">GET /admin/status — daemon + Supermemory status</div>
 <div class="endpoint">POST /admin/daemon/pause — pause activity capture</div>
 <div class="endpoint">POST /admin/daemon/resume — resume activity capture</div>
-<div class="endpoint">POST /admin/compact — gzip old JSONL archives</div>
-<div class="endpoint">DELETE /admin/memories — clear all stored events</div>
-<div class="endpoint" style="margin-top:10px;color:#888;">POST /mcp · GET /mcp/tools — AI agent integration</div>
+<div class="endpoint">POST /admin/compact — gzip old archives to save disk</div>
+<div class="endpoint">DELETE /admin/memories — clear all stored memories</div>
+</div>
 </div>
 
 <div class="section">
 <div class="section-label">Configuration</div>
 <p class="desc">Copy <code>.env.example</code> to <code>.env</code>. The server reads these variables at startup:</p>
+<div class="ref-card">
 <div class="endpoint">SUPERMEMORY_URL — http://localhost:6767 (default)</div>
-<div class="endpoint">SUPERMEMORY_API_KEY — printed on first supermemory boot</div>
+<div class="endpoint">SUPERMEMORY_API_KEY — printed on first Supermemory boot</div>
 <div class="endpoint">CONTAINER_TAG — namespace for your memories (default: trace)</div>
 <div class="endpoint">WATCH_SOURCES — comma-separated: filesystem, browser, editor, terminal, clipboard</div>
 <div class="endpoint">WATCH_PATHS — semicolon-separated directories to monitor</div>
 <div class="endpoint">CHROME_HISTORY / EDGE_HISTORY / BRAVE_HISTORY — browser history paths (OS default)</div>
 <div class="endpoint">SHELL_HISTORY — terminal history path (PowerShell PSReadLine default)</div>
 <div class="endpoint">API_PORT — context API port (default: 6768)</div>
-<div class="endpoint">HUD_PORT — web HUD port (default: 6769)</div>
+<div class="endpoint">HUD_PORT — web view port (default: 6769)</div>
 <div class="endpoint">DIGEST_HOUR — local hour (0–23) to write the daily digest (default: 21)</div>
-<div class="endpoint">AUTO_UPDATE_CHECK — poll UPDATE_URL for newer releases (default: true)</div>
+<div class="endpoint">AUTO_UPDATE_CHECK — poll for newer releases (default: true)</div>
 <div class="endpoint">UPDATE_URL — JSON endpoint returning { version, url, notes }</div>
 <div class="endpoint">LLM_URL / LLM_MODEL / LLM_API_KEY — for AI-powered Q&amp;A</div>
+</div>
 </div>
 
 <div class="section">
 <div class="section-label">Supermemory</div>
-<p class="desc">Trace uses <a href="https://supermemory.ai">Supermemory Local</a> as its remote memory backend. Supermemory handles chunking, embedding, vector storage, and hybrid search. It runs as a single binary on localhost:6767, inside WSL on Windows. Configure it with your preferred LLM provider for automatic memory extraction:</p>
-<div class="endpoint">OPENAI_BASE_URL=https://openrouter.ai/api/v1</div>
-<div class="endpoint">OPENAI_API_KEY=sk-or-v1-...</div>
-<div class="endpoint">OPENAI_MODEL=google/gemma-4-31b-it:free</div>
-<p class="desc" style="margin-top:12px;">Supermemory's memory agent workflow extracts facts from each document, enabling semantic search and user profile building over time. When no LLM is configured, documents are still indexed for vector search, but the memory agent is skipped.</p>
+<p class="desc">Trace uses <a href="https://supermemory.ai">Supermemory Local</a> as its private memory backend. It handles chunking, embedding, and search, and runs entirely on your machine. Configure it with your preferred LLM provider for automatic memory extraction.</p>
 </div>
 
 <div class="section">
 <div class="section-label">Resilience</div>
 <div class="arch-grid">
-<div class="arch-item"><div class="label">Watchdog</div><div class="desc"><code>npm run watchdog</code> runs a supervisor that restarts the server on unexpected exit. Crash-loop protection: max 5 restarts per minute.</div></div>
-<div class="arch-item"><div class="label">Auto-update</div><div class="desc">When <code>AUTO_UPDATE_CHECK=true</code> and <code>UPDATE_URL</code> is set, trace polls for a newer version and logs the result. Set <code>AUTO_UPDATE_DOWNLOAD=true</code> to also fetch the release asset into <code>./release</code>.</div></div>
-<div class="arch-item"><div class="label">Installer</div><div class="desc"><code>install.ps1</code> (Windows) and <code>install.sh</code> (WSL/Linux) install deps, build, configure <code>.env</code>, start Supermemory, and launch trace under the watchdog in one command.</div></div>
-<div class="arch-item"><div class="label">Binaries</div><div class="desc">The Electron overlay packages via <code>electron-builder</code> (<code>npm run dist:app</code>, produces <code>release/Trace Setup*.exe</code>). The server can be run via <code>node dist/index.js</code> or <code>npm run watchdog</code>.</div></div>
+<div class="arch-item"><div class="label">Watchdog</div><div class="desc"><code>npm run watchdog</code> runs a supervisor that restarts the server on unexpected exit, with crash-loop protection.</div></div>
+<div class="arch-item"><div class="label">Auto-update</div><div class="desc">When enabled, trace politely checks for a newer version and lets you know — nothing is forced.</div></div>
+<div class="arch-item"><div class="label">Installer</div><div class="desc">One-command installers (<code>install.ps1</code> / <code>install.sh</code>) set up dependencies, configure <code>.env</code>, start Supermemory, and launch trace.</div></div>
+<div class="arch-item"><div class="label">Binaries</div><div class="desc">Packages as a desktop app via <code>electron-builder</code>, or runs as a plain Node service with <code>npm run watchdog</code>.</div></div>
 </div>
 </div>
 
 <div class="section">
 <div class="section-label">Updates</div>
 <div class="timeline">
-<div class="entry"><div class="entry-date">Jul 13</div><div class="entry-desc"><strong>Code audit &amp; cleanup</strong> Removed dead code, deduplicated text/search helpers into shared modules used by both the server and the Electron UI, fixed <code>.gitignore</code> (release output, stale smt entries), and rewrote the README and landing page.</div></div>
-<div class="entry"><div class="entry-date">Jul 12</div><div class="entry-desc"><strong>Splash &amp; lifecycle</strong> Boot splash screen with live startup progress (WSL detection, Supermemory status, daemon init). VBS scripts auto-elevate to admin and manage WSL Supermemory lifecycle directly. /stop kills Supermemory inside WSL. System app noise filtered from activity tracking. Supermemory metadata flattening fixes document ingestion. LLM query timeout reduced to 15s with graceful error handling.</div></div>
-<div class="entry"><div class="entry-date">Jul 11</div><div class="entry-desc"><strong>v0.1.0</strong> Renamed from smt to trace. Single-instance lock prevents duplicate launches. Local store scans all events for search. Supermemory uses v3/search with remoteOk flag. Chat-style overlay with logo in tray, search bar, spinner, HUD, and favicon. Comprehensive README and landing page.</div></div>
-<div class="entry"><div class="entry-date">Jul 11</div><div class="entry-desc"><strong>Chat AI</strong> Logo-based typing spinner. Escape returns to home view. LLM context includes recent events. Blur debounce at 300ms with focus cancellation. HUD with live event feed and session timeline.</div></div>
-<div class="entry"><div class="entry-date">Jul 11</div><div class="entry-desc"><strong>Search &amp; AI</strong> Chat-style search bar. Enter to send, AI Q&amp;A mode with message bubbles. Logo in search field. Server health check on startup with degraded mode fallback.</div></div>
-<div class="entry"><div class="entry-date">Jul 11</div><div class="entry-desc"><strong>Unified Tracker</strong> Single persistent PowerShell process replaces separate activity.ts and browser.ts. Captures foreground switches, browser URLs (UI Automation), process snapshots, and idle detection on a 3-second loop with automatic restart on crash.</div></div>
-<div class="entry"><div class="entry-date">Jul 11</div><div class="entry-desc"><strong>Startup scripts</strong> start.bat and start.vbs for one-click launch. Server and Electron start in hidden windows. HUD port 6769 for browser-based monitoring.</div></div>
-<div class="entry"><div class="entry-date">Jul 10</div><div class="entry-desc"><strong>Redesign</strong> Electron overlay redesigned with greeting, background event fetch, and close-out animation. Summary endpoint with 5-minute cache. LLM-powered activity summaries. 5-second HUD polling.</div></div>
-<div class="entry"><div class="entry-date">Jul 10</div><div class="entry-desc"><strong>Electron overlay</strong> Native frameless, transparent, always-on-top window with Spotlight-style appearance. Tray icon with show/quit. Alt+X global shortcut. IPC bridge for API calls. Context API with MCP tool support. HUD WebSocket server.</div></div>
-<div class="entry"><div class="entry-date">Jul 9</div><div class="entry-desc"><strong>HUD overlay</strong> Dark-themed web dashboard with live activity feed, session timeline, search with keyboard navigation, and status indicators. Express server with WebSocket push.</div></div>
-<div class="entry"><div class="entry-date">Jul 8</div><div class="entry-desc"><strong>Initial build</strong> Daemon watchers for filesystem (chokidar), editor projects, and terminal history. Supermemory client with local JSONL storage and remote API. Dual-layer search with automatic fallback. Session grouping with 30-minute gap detection.</div></div>
+<div class="entry"><div class="entry-date">Jul 13</div><div class="entry-desc"><strong>Code audit &amp; cleanup</strong> Removed dead code, deduplicated shared helpers, fixed <code>.gitignore</code>, and rewrote the README and site.</div></div>
+<div class="entry"><div class="entry-date">Jul 12</div><div class="entry-desc"><strong>Splash &amp; lifecycle</strong> Boot splash with live progress, auto-elevating launchers, and cleaner system-app filtering.</div></div>
+<div class="entry"><div class="entry-date">Jul 11</div><div class="entry-desc"><strong>v0.1.0</strong> Renamed to trace, single-instance lock, and a comprehensive chat-style overlay with HUD and favicon.</div></div>
+<div class="entry"><div class="entry-date">Jul 10</div><div class="entry-desc"><strong>Redesign</strong> Calm overlay with greeting, natural-language summaries, and a graceful close animation.</div></div>
+<div class="entry"><div class="entry-date">Jul 9</div><div class="entry-desc"><strong>HUD</strong> Dark-themed web dashboard with live activity, session timeline, and search.</div></div>
+<div class="entry"><div class="entry-date">Jul 8</div><div class="entry-desc"><strong>Initial build</strong> Daemon watchers, Supermemory client with local fallback, and session grouping.</div></div>
 </div>
 </div>
 
 <footer>
-<p><a href="https://github.com/f4w4z/trace">GitHub</a> &middot; <a href="https://supermemory.ai">Supermemory</a></p>
+<p><a href="https://github.com/f4w4z/trace">GitHub</a></p>
+<p><a href="https://supermemory.ai">Supermemory</a></p>
 </footer>
 
+</div>
 </body>
 </html>

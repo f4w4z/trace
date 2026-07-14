@@ -74,23 +74,37 @@ export class SupermemoryClient {
     const seen = new Set<string>()
     const combined: SupermemoryMemory[] = []
 
-    // Add remote results first (they have semantic scoring)
-    for (const r of remoteResults) {
+    // Allocate up to half the limit for remote semantic results
+    const remoteLimit = Math.min(remoteResults.length, Math.floor(limit / 2))
+    for (let i = 0; i < remoteLimit; i++) {
+      const r = remoteResults[i]
       if (r.id) {
         seen.add(r.id)
         combined.push(r)
       }
     }
 
-    // Add local results (keyword scoring)
+    // Fill the remaining slots with local keyword results
     for (const l of localResults) {
       if (l.id && !seen.has(l.id)) {
         seen.add(l.id)
         combined.push(l)
       }
+      if (combined.length >= limit) break
     }
 
-    return combined.slice(0, limit)
+    // If we still have slots left, fill them with any remaining remote results
+    if (combined.length < limit) {
+      for (const r of remoteResults) {
+        if (r.id && !seen.has(r.id)) {
+          seen.add(r.id)
+          combined.push(r)
+        }
+        if (combined.length >= limit) break
+      }
+    }
+
+    return combined
   }
 
   async listDocuments(limit = 100, _page = 1): Promise<SupermemoryMemory[]> {

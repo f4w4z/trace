@@ -151,7 +151,20 @@ export class LocalStore {
           // Recency factor: newer events are near index 0
           const recencyFactor = 1 - (i / all.length)
           const matchesAllBonus = matchesAll ? 2.0 : 0.0
-          const score = (matchCount / searchTerms.length) * 10.0 + matchesAllBonus + recencyFactor
+
+          // Calculate length-weighted match ratio to favor rare/longer terms (proper nouns, filenames, URLs) over short ones
+          let matchedLength = 0
+          let totalLength = 0
+          for (const term of searchTerms) {
+            const isMatch = content.includes(term) || meta.includes(term) || app.includes(term) || title.includes(term) || source.includes(term)
+            totalLength += term.length
+            if (isMatch) {
+              matchedLength += term.length
+            }
+          }
+          const lengthWeight = totalLength > 0 ? (matchedLength / totalLength) : 0
+
+          const score = lengthWeight * 10.0 + matchesAllBonus + recencyFactor
 
           scoredDocs.push({
             doc: {

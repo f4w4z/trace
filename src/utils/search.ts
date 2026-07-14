@@ -2,7 +2,8 @@ export const STOP_WORDS = new Set([
   'what', 'were', 'when', 'where', 'that', 'this', 'there', 'with', 'have', 'been', 'your', 'about', 'tell', 'from',
   'was', 'did', 'does', 'had', 'not', 'the', 'and', 'for', 'are', 'but', 'you', 'our', 'him', 'her', 'its', 'out',
   'has', 'get', 'set', 'who', 'how', 'why', 'can', 'will', 'would', 'should', 'could', 'than', 'then', 'them',
-  'they', 'their', 'she', 'his', 'any', 'some', 'all', 'into', 'onto', 'over', 'under', 'here'
+  'they', 'their', 'she', 'his', 'any', 'some', 'all', 'into', 'onto', 'over', 'under', 'here',
+  'is', 'on', 'in', 'of', 'to', 'a', 'an', 'by', 'or', 'as', 'it', 'at', 'me', 'my', 'we', 'us', 'am', 'be', 'so'
 ])
 
 export function tokenizeQuery(query: string): string[] {

@@ -137,8 +137,8 @@ footer a { font-size: 12px; }
 <body>
 
 <header>
-<h1>trace <span>local context cloud</span></h1>
-<p>AI agents and coding tools have no memory of what you did between conversations. They start blank every time. Trace solves this by continuously capturing your computer activity, indexing it locally with <a href="https://supermemory.ai">Supermemory</a>, and exposing it through a chat overlay and API. Your context persists forever.</p>
+<h1>trace <span>your memory, on your machine</span></h1>
+<p>Trace quietly remembers what you do on your computer — the files you touch, the tabs you open, the commands you run — and lets you ask about any of it later in plain language. Everything stays local. Nothing leaves your machine unless you point it at an AI.</p>
 </header>
 
 <div class="section">
@@ -152,24 +152,21 @@ footer a { font-size: 12px; }
 <div class="arch-item"><div class="label">Capture</div><div class="desc">A persistent PowerShell process streams what you do: foreground window changes, browser URLs (via UI Automation), running processes, and idle state. Separate watchers track file edits, editor projects, terminal commands, git activity, and clipboard. All events are timestamped and tagged with source, app, and project context.</div></div>
 <div class="arch-item"><div class="label">Store</div><div class="desc">Every event is written immediately to <code>~/.trace/events.jsonl</code> and asynchronously posted to Supermemory Local on port 6767 for chunking, embedding, and indexing. The local file acts as the source of truth. Supermemory provides hybrid vector-keyword search. If Supermemory is down, all queries fall back to full substring scan of the local file.</div></div>
 <div class="arch-item"><div class="label">Query</div><div class="desc">An Express server on port 6768 exposes REST endpoints for context retrieval, search, daily summaries, and MCP-compatible tools for AI agents. An LLM-powered Q&amp;A mode sends your query plus relevant memories to any OpenAI-compatible endpoint (OpenRouter, OpenAI, Ollama, etc.) and returns a natural language answer citing specific apps, files, and URLs.</div></div>
-<div class="arch-item"><div class="label">Access</div><div class="desc">Press Alt+X to open a frameless chat overlay where you can type questions and get answers with supporting evidence. A web-based HUD on port 6769 shows live activity, session timelines, and search results. The API can be used directly, or through MCP tools integrated into OpenCode, Claude Code, Cursor, and other AI coding assistants.</div></div>
+<div class="arch-item"><div class="label">Access</div><div class="desc">Press Alt+X to open a calm chat overlay where you can ask questions and get answers in plain language. A web view on port 6769 offers the same search experience. The API can be used directly, or through MCP tools integrated into OpenCode, Claude Code, Cursor, and other AI coding assistants.</div></div>
 </div>
 </div>
 
 <div class="section">
-<div class="section-label">Events captured</div>
-<p class="desc">Each event carries a source, type, content, timestamp, metadata (app, project, URL, path), and tags for filtering and time bucketing.</p>
+<div class="section-label">What it remembers</div>
+<p class="desc">Trace keeps a private, searchable record of your activity so you can find anything later. Sensitive content (passwords, tokens, keys) is redacted automatically.</p>
 <ul class="feature-list">
-<li>Foreground app switches with window title (system apps filtered)</li>
-<li>Browser URL changes (Chrome, Edge, Brave via UI Automation)</li>
-<li>Process snapshots every 10 seconds for app open/close detection</li>
-<li>Idle start and end events after 5 minutes of inactivity</li>
-<li>File creation and modification events via chokidar</li>
-<li>Editor project directory detection</li>
-<li>PowerShell command history capture</li>
-<li>Git commit messages, branch switches, and active branch (via <code>.git/logs/HEAD</code>)</li>
-<li>Clipboard snippets — sensitive patterns redacted, trimmed to 280 chars</li>
-<li>Auto-generated session summaries every 30 minutes per project</li>
+<li>The apps and windows you're working in</li>
+<li>Browser pages you visit (Chrome, Edge, Brave)</li>
+<li>Files you create and edit</li>
+<li>Editor projects and git activity (commits, branches)</li>
+<li>Terminal commands you run</li>
+<li>Clipboard snippets — redacted and trimmed for safety</li>
+<li>Calm, automatic summaries of each session</li>
 </ul>
 </div>
 

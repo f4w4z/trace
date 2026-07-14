@@ -1,7 +1,6 @@
 const ICONS = { filesystem: '📁', browser: '🌐', editor: '✏️', terminal: '💻', system: '⚙️', media: '🎵' }
 
 let username = 'there'
-let activeEvents = []
 let selectedIndex = -1
 let chatMode = false
 let aiMode = false
@@ -17,8 +16,7 @@ const greetingSub = document.getElementById('greeting-sub')
 const summary = document.getElementById('summary')
 const summaryText = document.getElementById('summary-text')
 const summaryStats = document.getElementById('summary-stats')
-const events = document.getElementById('events')
-const eventsEmpty = document.getElementById('events-empty')
+const home = document.getElementById('home')
 const convSection = document.getElementById('convs-section')
 const convList = document.getElementById('conv-list')
 const searchRow = document.getElementById('search-row')
@@ -36,6 +34,7 @@ window.trace.username().then(name => {
 
 window.trace.onFocusSearch(() => {
   setTimeout(() => input.focus(), 50)
+  renderGreeting(true)
   const now = Date.now()
   if (now - lastSummaryTime > 15 * 60 * 1000) {
     pollSummary()
@@ -46,50 +45,60 @@ window.trace.onBlurHide(() => {
   closeWindow()
 })
 
-function renderGreeting() {
-  const h = new Date().getHours()
-  const time = h < 12 ? 'morning' : h < 17 ? 'afternoon' : 'evening'
-  greetingText.textContent = `Hey ${username}`
-  greetingSub.textContent = activeEvents.length
-    ? `You've been working on ${activeEvents[0]?.metadata?.project || 'a few things'}`
-    : `Good ${time} — start working and trace will catch it`
+const GREETING_WORD = { morning: 'Good morning', afternoon: 'Good afternoon', evening: 'Good evening', night: 'Good evening' }
+const GREETING_LINES = {
+  morning: [
+    "Fresh start — what are we diving into today?",
+    "Morning. What can I help you pick back up?",
+    "A new day. Ask me anything about your work.",
+    "Rise and shine. What were you last on?",
+  ],
+  afternoon: [
+    "Hope your day's flowing. What can I find for you?",
+    "Midday already — want to recap what you've been on?",
+    "What are you in the middle of? I've got it.",
+    "The afternoon's yours. What should we look at?",
+  ],
+  evening: [
+    "Winding down? I've got today's notes ready.",
+    "Evening. What would you like to revisit?",
+    "Almost done for the day? Ask me anything.",
+    "Quiet moment — what are you curious about?",
+  ],
+  night: [
+    "Still here — what can I help with?",
+    "Late one. What are you hunting for?",
+    "Burning the midnight oil? I'm right here.",
+  ],
 }
 
-function renderEvents() {
-  eventsEmpty.classList.toggle('hidden', activeEvents.length > 0)
-  if (!activeEvents.length) { events.innerHTML = ''; return }
+let greetingLineIdx = 0
 
-  events.innerHTML = activeEvents.slice(0, 12).map((e, i) => {
-    const icon = ICONS[e.source] ?? '📄'
-    const title = cleanTitle(e.content || '')
-    const detail = e.metadata?.path || e.metadata?.url || e.metadata?.project || e.metadata?.app || ''
-    const ts = e.timestamp || e.metadata?.rawTimestamp
-    return `<div class="event-item" data-index="${i}" style="animation-delay:${(i % 12) * 0.03}s">
-      <div class="event-icon ${e.source}">${icon}</div>
-      <div class="event-body">
-        <div class="event-title">${escape(title)}</div>
-        ${detail ? `<div class="event-detail">${escape(detail)}</div>` : ''}
-      </div>
-      ${ts ? `<div class="event-time">${timeAgo(ts)}</div>` : ''}
-    </div>`
-  }).join('')
+function periodForHour(h) {
+  if (h < 5) return 'night'
+  if (h < 12) return 'morning'
+  if (h < 17) return 'afternoon'
+  if (h < 21) return 'evening'
+  return 'night'
+}
+
+function renderGreeting(advance = false) {
+  if (advance) greetingLineIdx++
+  const h = new Date().getHours()
+  const period = periodForHour(h)
+  const name = username && username !== 'there' ? `${username}` : ''
+  greetingText.textContent = name ? `${GREETING_WORD[period]}, ${name}` : GREETING_WORD[period]
+  const pool = GREETING_LINES[period]
+  greetingSub.textContent = pool[greetingLineIdx % pool.length]
 }
 
 function renderSummary(data) {
-  if (!data || !data.text || !data.stats || !data.stats.total) {
+  if (!data || !data.text) {
     summary.classList.remove('visible')
     return
   }
   document.getElementById('summary-loading').classList.remove('visible')
   summaryText.innerHTML = renderMarkdown(escape(data.text))
-  summaryStats.innerHTML = ''
-  const chips = []
-  if (data.stats?.total) chips.push(`<div class="stat-chip"><b>${data.stats.total}</b> events</div>`)
-  if (data.stats?.apps?.length) chips.push(`<div class="stat-chip"><b>${data.stats.apps.length}</b> apps</div>`)
-  if (data.stats?.files?.length) chips.push(`<div class="stat-chip"><b>${data.stats.files.length}</b> files</div>`)
-  const pc = data.stats?.browsers?.reduce((s, b) => s + b.titles.length, 0) || 0
-  if (pc) chips.push(`<div class="stat-chip"><b>${pc}</b> pages</div>`)
-  summaryStats.innerHTML = chips.join('')
   summary.classList.add('visible')
 }
 
@@ -238,26 +247,9 @@ async function loadInitialState() {
 
 // ---- background polling ----
 
-let eventsKey = ''
 let lastSummary = null
 let pollingSummary = false
 let lastSummaryTime = 0
-
-async function pollEvents() {
-  const data = await withTimeout(window.trace.api('GET', '/context/current'), 10000)
-  if (!data) {
-    if (!eventsKey) greetingSub.textContent = 'Connecting...'
-    return
-  }
-  const evts = data.recentEvents ?? []
-  const key = evts.map(e => e.id ?? e.content).join('|')
-  if (key === eventsKey) return
-  eventsKey = key
-  activeEvents = evts
-  selectedIndex = -1
-  renderGreeting()
-  if (!chatMode) renderEvents()
-}
 
 function withTimeout(promise, ms) {
   return Promise.race([
@@ -310,9 +302,8 @@ function closeWindow() {
 }
 
 loadInitialState()
-pollEvents()
 pollSummary()
-setInterval(pollEvents, 5000)
+setInterval(() => renderGreeting(false), 60000)
 
 // ---- chat ----
 
@@ -337,7 +328,7 @@ setInterval(pollEvents, 5000)
       e.preventDefault()
       aiMode = !aiMode
       searchRow.classList.toggle('ai-mode', aiMode)
-      input.placeholder = aiMode ? 'Ask anything...' : "Ask what you've been doing..."
+      input.placeholder = aiMode ? 'Ask anything...' : 'Ask anything, or search your memory...'
       input.focus()
       return
     }
@@ -556,14 +547,11 @@ function renderChatMessage(msg) {
       const detail = m.metadata?.path ?? m.metadata?.url ?? m.metadata?.project ?? ''
       const isUrl = String(detail).startsWith('http')
       const detailHtml = isUrl
-        ? `<a class="event-link" href="#" onclick="event.preventDefault(); window.trace.openUrl('${escape(detail)}')">${escape(detail)}</a>`
+        ? `<a class="src-link" href="#" onclick="event.preventDefault(); window.trace.openUrl('${escape(detail)}')">${escape(detail)}</a>`
         : escape(detail)
-      return `<div class="event-item">
-        <div class="event-icon ${s}">${icon}</div>
-        <div class="event-body">
-          <div class="event-title">${escape(title)}</div>
-          ${detail ? `<div class="event-detail">${detailHtml}</div>` : ''}
-        </div>
+      return `<div class="src-item">
+        <div class="src-title">${escape(title)}</div>
+        ${detail ? `<div class="src-detail">${detailHtml}</div>` : ''}
       </div>`
     }).join('')
     html += '</div>'
@@ -599,18 +587,16 @@ function renderChatMessage(msg) {
 function enterChat() {
   chatMode = true
   summary.classList.remove('visible')
-  events.style.display = 'none'
-  chat.style.display = 'flex'
+  home.style.display = 'none'
+  chat.classList.add('visible')
 }
 
 function exitChat() {
   chatMode = false
   activeConv = null
-  chat.style.display = 'none'
-  events.style.display = ''
-  summary.classList.remove('hidden')
+  chat.classList.remove('visible')
+  home.style.display = ''
   renderSummary(lastSummary)
-  renderEvents()
   renderConversations()
 }
 

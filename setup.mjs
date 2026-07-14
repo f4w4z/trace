@@ -360,7 +360,8 @@ function launchDocker() {
   for (const exe of candidates) {
     if (fs.existsSync(exe)) {
       try {
-        spawn(exe, [], { shell: true, windowsHide: true, detached: true, stdio: "ignore" });
+        const child = spawn(exe, [], { detached: true, stdio: "ignore", windowsHide: false });
+        child.unref();
         return true;
       } catch {
         /* try next */
@@ -492,13 +493,18 @@ async function main() {
 
   // 2. Docker
   await step("Checking for Docker Desktop…", async () => {
-    if (checkDocker()) return;
-    console.log("  " + C.dim + "Docker isn't running — trying to open it…" + C.reset);
+    stopSpinner();
+    if (checkDocker()) {
+      startSpinner("Checking for Docker Desktop…");
+      return;
+    }
+    console.log("  " + C.dim + "Docker isn't running — opening Docker Desktop…" + C.reset);
     if (!launchDocker()) {
       throw new Error(
         "Couldn't find Docker Desktop. Install it from https://www.docker.com/products/docker-desktop/, then run setup again."
       );
     }
+    startSpinner("Waiting for Docker to start…");
     for (let i = 0; i < 40; i++) {
       await sleep(3000);
       if (checkDocker()) return;

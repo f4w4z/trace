@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>trace - your memory, on your machine</title>
-<meta name="description" content="trace is a private, local memory for your computer. It quietly remembers what you do and lets you ask about it in plain language — your context stays on your machine.">
+<meta name="description" content="trace is a private, local memory for your computer. It quietly remembers what you do and lets you ask about it in plain language. Your context stays on your machine.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -138,12 +138,12 @@ footer a { font-size: 12px; }
 
 <header>
 <h1>trace <span>your memory, on your machine</span></h1>
-<p>Trace quietly remembers what you do on your computer — the files you touch, the tabs you open, the commands you run — and lets you ask about any of it later in plain language. Everything stays local. Nothing leaves your machine unless you point it at an AI.</p>
+<p>Trace quietly remembers what you do on your computer: the files you touch, the tabs you open, the commands you run, and lets you ask about any of it later in plain language. Everything stays local. Nothing leaves your machine unless you point it at an AI.</p>
 </header>
 
 <div class="section">
 <div class="section-label">Why</div>
-<p class="desc">Every time you ask an AI about your work, it starts from scratch — it has no idea what you were just doing. The files you edited, the terminal commands you ran, the tabs you had open, the project you were focused on. Trace quietly keeps a private memory of all of it and lets you ask about it in plain language: &ldquo;what was I working on yesterday?&rdquo; It runs entirely on your machine. Nothing leaves.</p>
+<p class="desc">Every time you ask an AI about your work, it starts from scratch. It has no idea what you were just doing. The files you edited, the terminal commands you ran, the tabs you had open, the project you were focused on. Trace quietly keeps a private memory of all of it and lets you ask about it in plain language: &ldquo;what was I working on yesterday?&rdquo; It runs entirely on your machine. Nothing leaves.</p>
 </div>
 
 <div class="section">
@@ -165,7 +165,7 @@ footer a { font-size: 12px; }
 <li>Files you create and edit</li>
 <li>Editor projects and git activity (commits, branches)</li>
 <li>Terminal commands you run</li>
-<li>Clipboard snippets — redacted and trimmed for safety</li>
+<li>Clipboard snippets: redacted and trimmed for safety</li>
 <li>Calm, automatic summaries of each session</li>
 </ul>
 </div>
@@ -174,7 +174,7 @@ footer a { font-size: 12px; }
 <div class="section-label">Intelligence</div>
 <div class="arch-grid">
 <div class="arch-item"><div class="label">Dedup</div><div class="desc">Near-duplicate events (same source + normalized content within 10 min) are dropped before they hit the store or remote.</div></div>
-<div class="arch-item"><div class="label">Topics</div><div class="desc"><code>/context/topics</code> derives emergent topics from recent activity — frequent keywords, tags, and project names clustered automatically.</div></div>
+<div class="arch-item"><div class="label">Topics</div><div class="desc"><code>/context/topics</code> derives emergent topics from recent activity: frequent keywords, tags, and project names clustered automatically.</div></div>
 <div class="arch-item"><div class="label">Predict</div><div class="desc"><code>/context/predict</code> proactively surfaces memories and files relevant to a project or file path. Wire it into an editor extension for live context injection.</div></div>
 <div class="arch-item"><div class="label">Digest</div><div class="desc">At <code>DIGEST_HOUR</code> (local time) a markdown summary of the day is written to <code>~/.trace/digests/YYYY-MM-DD.md</code> and logged.</div></div>
 <div class="arch-item"><div class="label">Compact</div><div class="desc">Rotated JSONL archives are gzipped on demand via <code>POST /admin/compact</code> to save disk. Reads transparently decompress <code>.gz</code> files.</div></div>
@@ -195,41 +195,41 @@ footer a { font-size: 12px; }
 <div class="section">
 <div class="section-label">API</div>
 <p class="desc">All endpoints return JSON. The server runs on port 6768.</p>
-<div class="endpoint">GET /context/current — active project, recent events, current session</div>
-<div class="endpoint">GET /context/query?q=...&llm=true — search memories with optional AI answer</div>
-<div class="endpoint">GET /context/chat?q=... — free-form AI chat (no activity context)</div>
-<div class="endpoint">GET /context/summary?since=... — LLM summary of recent activity</div>
-<div class="endpoint">GET /context/day?date=2026-07-11 — full day with sessions grouped by project</div>
-<div class="endpoint">GET /context/recent-files?limit=20 — most recently touched files</div>
-<div class="endpoint">GET /context/project?project=... — all memories for a project</div>
-<div class="endpoint">GET /context/timeline?start=ISO&end=ISO — every event in a time range</div>
-<div class="endpoint">GET /context/topics?limit=8 — emergent topics clustered from activity</div>
-<div class="endpoint">GET /context/predict?project=&path= — proactively relevant memories + files</div>
-<div class="endpoint">GET /health — service health and Supermemory status</div>
-<div class="endpoint">GET /admin/status — daemon + Supermemory status</div>
-<div class="endpoint">POST /admin/daemon/pause — pause activity capture</div>
-<div class="endpoint">POST /admin/daemon/resume — resume activity capture</div>
-<div class="endpoint">POST /admin/compact — gzip old JSONL archives</div>
-<div class="endpoint">DELETE /admin/memories — clear all stored events</div>
-<div class="endpoint" style="margin-top:10px;color:#888;">POST /mcp · GET /mcp/tools — AI agent integration</div>
+<div class="endpoint">GET /context/current: active project, recent events, current session</div>
+<div class="endpoint">GET /context/query?q=...&llm=true: search memories with optional AI answer</div>
+<div class="endpoint">GET /context/chat?q=...: free-form AI chat (no activity context)</div>
+<div class="endpoint">GET /context/summary?since=...: LLM summary of recent activity</div>
+<div class="endpoint">GET /context/day?date=2026-07-11: full day with sessions grouped by project</div>
+<div class="endpoint">GET /context/recent-files?limit=20: most recently touched files</div>
+<div class="endpoint">GET /context/project?project=...: all memories for a project</div>
+<div class="endpoint">GET /context/timeline?start=ISO&end=ISO: every event in a time range</div>
+<div class="endpoint">GET /context/topics?limit=8: emergent topics clustered from activity</div>
+<div class="endpoint">GET /context/predict?project=&path=: proactively relevant memories + files</div>
+<div class="endpoint">GET /health: service health and Supermemory status</div>
+<div class="endpoint">GET /admin/status: daemon + Supermemory status</div>
+<div class="endpoint">POST /admin/daemon/pause: pause activity capture</div>
+<div class="endpoint">POST /admin/daemon/resume: resume activity capture</div>
+<div class="endpoint">POST /admin/compact: gzip old JSONL archives</div>
+<div class="endpoint">DELETE /admin/memories: clear all stored events</div>
+<div class="endpoint" style="margin-top:10px;color:#888;">POST /mcp · GET /mcp/tools: AI agent integration</div>
 </div>
 
 <div class="section">
 <div class="section-label">Configuration</div>
 <p class="desc">Copy <code>.env.example</code> to <code>.env</code>. The server reads these variables at startup:</p>
-<div class="endpoint">SUPERMEMORY_URL — http://localhost:6767 (default)</div>
-<div class="endpoint">SUPERMEMORY_API_KEY — printed on first supermemory boot</div>
-<div class="endpoint">CONTAINER_TAG — namespace for your memories (default: trace)</div>
-<div class="endpoint">WATCH_SOURCES — comma-separated: filesystem, browser, editor, terminal, clipboard</div>
-<div class="endpoint">WATCH_PATHS — semicolon-separated directories to monitor</div>
-<div class="endpoint">CHROME_HISTORY / EDGE_HISTORY / BRAVE_HISTORY — browser history paths (OS default)</div>
-<div class="endpoint">SHELL_HISTORY — terminal history path (PowerShell PSReadLine default)</div>
-<div class="endpoint">API_PORT — context API port (default: 6768)</div>
-<div class="endpoint">HUD_PORT — web HUD port (default: 6769)</div>
-<div class="endpoint">DIGEST_HOUR — local hour (0–23) to write the daily digest (default: 21)</div>
-<div class="endpoint">AUTO_UPDATE_CHECK — poll UPDATE_URL for newer releases (default: true)</div>
-<div class="endpoint">UPDATE_URL — JSON endpoint returning { version, url, notes }</div>
-<div class="endpoint">LLM_URL / LLM_MODEL / LLM_API_KEY — for AI-powered Q&amp;A</div>
+<div class="endpoint">SUPERMEMORY_URL: http://localhost:6767 (default)</div>
+<div class="endpoint">SUPERMEMORY_API_KEY: printed on first supermemory boot</div>
+<div class="endpoint">CONTAINER_TAG: namespace for your memories (default: trace)</div>
+<div class="endpoint">WATCH_SOURCES: comma-separated: filesystem, browser, editor, terminal, clipboard</div>
+<div class="endpoint">WATCH_PATHS: semicolon-separated directories to monitor</div>
+<div class="endpoint">CHROME_HISTORY / EDGE_HISTORY / BRAVE_HISTORY: browser history paths (OS default)</div>
+<div class="endpoint">SHELL_HISTORY: terminal history path (PowerShell PSReadLine default)</div>
+<div class="endpoint">API_PORT: context API port (default: 6768)</div>
+<div class="endpoint">HUD_PORT: web HUD port (default: 6769)</div>
+<div class="endpoint">DIGEST_HOUR: local hour (0–23) to write the daily digest (default: 21)</div>
+<div class="endpoint">AUTO_UPDATE_CHECK: poll UPDATE_URL for newer releases (default: true)</div>
+<div class="endpoint">UPDATE_URL: JSON endpoint returning { version, url, notes }</div>
+<div class="endpoint">LLM_URL / LLM_MODEL / LLM_API_KEY: for AI-powered Q&amp;A</div>
 </div>
 
 <div class="section">
@@ -254,7 +254,7 @@ footer a { font-size: 12px; }
 <div class="section">
 <div class="section-label">Updates</div>
 <div class="timeline">
-<div class="entry"><div class="entry-date">Jul 15</div><div class="entry-desc"><strong>Consumer redesign</strong> The overlay and web HUD are now calm, minimal ask-bars — no event feeds, no memory or event counts, no &ldquo;recording&rdquo; indicators on the home screen. A dynamic, time-aware greeting welcomes you; asking a question returns a plain-language answer. Added a staged open animation (search bar first, then content slides down) and restored the original logo.</div></div>
+<div class="entry"><div class="entry-date">Jul 15</div><div class="entry-desc"><strong>Consumer redesign</strong> The overlay and web HUD are now calm, minimal ask-bars: no event feeds, no memory or event counts, no &ldquo;recording&rdquo; indicators on the home screen. A dynamic, time-aware greeting welcomes you; asking a question returns a plain-language answer. Added a staged open animation (search bar first, then content slides down) and restored the original logo.</div></div>
 <div class="entry"><div class="entry-date">Jul 13</div><div class="entry-desc"><strong>Code audit &amp; cleanup</strong> Removed dead code, deduplicated text/search helpers into shared modules used by both the server and the Electron UI, fixed <code>.gitignore</code> (release output, stale smt entries), and rewrote the README and landing page.</div></div>
 <div class="entry"><div class="entry-date">Jul 12</div><div class="entry-desc"><strong>Splash &amp; lifecycle</strong> Boot splash screen with live startup progress (WSL detection, Supermemory status, daemon init). VBS scripts auto-elevate to admin and manage WSL Supermemory lifecycle directly. /stop kills Supermemory inside WSL. System app noise filtered from activity tracking. Supermemory metadata flattening fixes document ingestion. LLM query timeout reduced to 15s with graceful error handling.</div></div>
 <div class="entry"><div class="entry-date">Jul 11</div><div class="entry-desc"><strong>v0.1.0</strong> Renamed from smt to trace. Single-instance lock prevents duplicate launches. Local store scans all events for search. Supermemory uses v3/search with remoteOk flag. Chat-style overlay with logo in tray, search bar, spinner, HUD, and favicon. Comprehensive README and landing page.</div></div>

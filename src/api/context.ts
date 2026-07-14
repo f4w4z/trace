@@ -287,7 +287,7 @@ ${events.slice(0, 60).map(e => `[${e.source}] ${e.content}${e.metadata.app ? ` (
     if (llmUrl && llmModel && llmApiKey) {
       try {
         const controller = new AbortController()
-        const timeout = setTimeout(() => controller.abort(), 60000)
+        const timeout = setTimeout(() => controller.abort(), 15000)
         text = await this.askLLM(prompt, [], llmUrl, llmModel, llmApiKey, true, controller.signal)
         clearTimeout(timeout)
       } catch { /* timeout or error — fall through to fallback */ }
@@ -514,7 +514,7 @@ ${context}`
           messages,
           stream: false,
         }),
-        signal: signal ?? AbortSignal.timeout(60000),
+        signal: signal ?? AbortSignal.timeout(15000),
       })
       if (!res.ok) {
         logger.warn(`LLM returned ${res.status}`)

@@ -236,6 +236,7 @@ async function loadInitialState() {
 
 let eventsKey = ''
 let lastSummary = null
+let pollingSummary = false
 
 async function pollEvents() {
   const data = await withTimeout(window.trace.api('GET', '/context/current'), 10000)
@@ -261,25 +262,34 @@ function withTimeout(promise, ms) {
 }
 
 async function pollSummary() {
+  if (pollingSummary) return
+  pollingSummary = true
   if (!chatMode) {
     summary.classList.add('visible')
     document.getElementById('summary-loading').classList.add('visible')
   }
   try {
     const data = await withTimeout(window.trace.api('GET', '/context/summary'), 30000)
-    if (data && data.error) {
+    if (!data) {
+      throw new Error('Timeout fetching summary')
+    }
+    if (data.error) {
       throw new Error(data.error)
     }
     if (!chatMode) document.getElementById('summary-loading').classList.remove('visible')
-    if (!data || !data.text) {
+    if (!data.text) {
       summary.classList.remove('visible')
+      pollingSummary = false
       return
     }
     lastSummary = data
     if (!chatMode) renderSummary(data)
   } catch (err) {
     console.error('Failed to poll summary, retrying in 3s:', err)
+    if (!chatMode) document.getElementById('summary-loading').classList.remove('visible')
     setTimeout(pollSummary, 3000)
+  } finally {
+    pollingSummary = false
   }
 }
 

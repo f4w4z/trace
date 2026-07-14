@@ -240,7 +240,7 @@ footer a { font-size: 12px; }
 <p class="desc">Trace uses <a href="https://supermemory.ai">Supermemory Local</a> as its remote memory backend. Supermemory handles chunking, embedding, vector storage, and hybrid search. It runs as a single binary on localhost:6767, inside WSL on Windows. Configure it with your preferred LLM provider for automatic memory extraction:</p>
 <div class="endpoint">OPENAI_BASE_URL=https://openrouter.ai/api/v1</div>
 <div class="endpoint">OPENAI_API_KEY=sk-or-v1-...</div>
-<div class="endpoint">OPENAI_MODEL=tencent/hy3-preview</div>
+<div class="endpoint">OPENAI_MODEL=meta-llama/llama-3.3-70b-instruct:free</div>
 <p class="desc" style="margin-top:12px;">Supermemory's memory agent workflow extracts facts from each document, enabling semantic search and user profile building over time. When no LLM is configured, documents are still indexed for vector search, but the memory agent is skipped.</p>
 </div>
 

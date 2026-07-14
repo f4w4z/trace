@@ -78,8 +78,8 @@ npm run build && npm start  # compiled output
 npm run app                 # launches app/main.cjs
 ```
 
-On Windows, double-click **`start.vbs`** to auto-elevate, clean up stale processes, start the
-Docker container, and launch the Electron app in one shot. **`stop.vbs`** tears everything down.
+On Windows, double-click **`scripts/start.vbs`** to auto-elevate, clean up stale processes, start the
+Docker container, and launch the Electron app in one shot. **`scripts/stop.vbs`** tears everything down.
 
 ---
 
@@ -172,7 +172,7 @@ docker compose down           # stop
 docker compose logs -f        # follow logs
 ```
 
-On Windows, `start.vbs` manages the full lifecycle (elevate → kill stale processes →
+On Windows, `scripts/start.vbs` manages the full lifecycle (elevate → kill stale processes →
 `docker compose up -d` → launch Electron).
 
 ---

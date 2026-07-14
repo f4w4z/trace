@@ -1,15 +1,14 @@
 On Error Resume Next
 Set WshShell = CreateObject("WScript.Shell")
 Set fso = CreateObject("Scripting.FileSystemObject")
-smt = Left(WScript.ScriptFullName, Len(WScript.ScriptFullName) - Len(WScript.ScriptName))
-If Right(smt, 1) = "\" Then smt = Left(smt, Len(smt) - 1)
+smt = fso.GetParentFolderName(fso.GetParentFolderName(WScript.ScriptFullName))
 
 ' === Ensure .env exists ===
 If Not fso.FileExists(smt & "\.env") Then
   If fso.FileExists(smt & "\.env.example") Then
     fso.CopyFile smt & "\.env.example", smt & "\.env", True
   Else
-    MsgBox "No .env or .env.example found. Run setup.bat first.", vbCritical, "Trace"
+    MsgBox "No .env or .env.example found. Run scripts\setup.bat first.", vbCritical, "Trace"
     WScript.Quit
   End If
 End If
@@ -78,7 +77,7 @@ If Not fso.FileExists(electronPath) Then
   If fso.FileExists(smt & "\node_modules\.package-lock.json") Then
     WshShell.Run "cmd /c cd /d """ & smt & """ && node -e ""require('electron')""", 0, True
   Else
-    MsgBox "Dependencies not installed. Run setup.bat first.", vbCritical, "Trace"
+    MsgBox "Dependencies not installed. Run scripts\setup.bat first.", vbCritical, "Trace"
     WScript.Quit
   End If
 End If

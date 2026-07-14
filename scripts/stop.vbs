@@ -1,8 +1,7 @@
 On Error Resume Next
 Set WshShell = CreateObject("WScript.Shell")
 Set fso = CreateObject("Scripting.FileSystemObject")
-smt = Left(WScript.ScriptFullName, Len(WScript.ScriptFullName) - Len(WScript.ScriptName))
-If Right(smt, 1) = "\" Then smt = Left(smt, Len(smt) - 1)
+smt = fso.GetParentFolderName(fso.GetParentFolderName(WScript.ScriptFullName))
 
 ' Stop Electron overlay
 WshShell.Run "taskkill /f /im electron.exe 2>nul", 0, True

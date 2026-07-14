@@ -62,11 +62,35 @@ export class SupermemoryClient {
   }
 
   async searchQuery(query: string, limit = 20, timeRange?: { startDate?: string; endDate?: string }): Promise<SupermemoryMemory[]> {
+    let remoteResults: SupermemoryMemory[] = []
     if (this.remoteOk) {
-      const results = await this.remoteSearch(query, limit, timeRange)
-      if (results !== null && results.length > 0) return results
+      try {
+        const results = await this.remoteSearch(query, limit, timeRange)
+        if (results !== null) remoteResults = results
+      } catch { /* ignore */ }
     }
-    return this.local.search(query, limit, timeRange?.startDate, timeRange?.endDate)
+    const localResults = await this.local.search(query, limit, timeRange?.startDate, timeRange?.endDate)
+
+    const seen = new Set<string>()
+    const combined: SupermemoryMemory[] = []
+
+    // Add remote results first (they have semantic scoring)
+    for (const r of remoteResults) {
+      if (r.id) {
+        seen.add(r.id)
+        combined.push(r)
+      }
+    }
+
+    // Add local results (keyword scoring)
+    for (const l of localResults) {
+      if (l.id && !seen.has(l.id)) {
+        seen.add(l.id)
+        combined.push(l)
+      }
+    }
+
+    return combined.slice(0, limit)
   }
 
   async listDocuments(limit = 100, _page = 1): Promise<SupermemoryMemory[]> {

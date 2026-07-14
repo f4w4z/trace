@@ -525,7 +525,7 @@ app.whenReady().then(async () => {
   ipcMain.handle('exec-command', async (_, cmd) => {
     switch (cmd) {
       case 'restart': {
-        spawn('wscript.exe', [path.join(__dirname, '..', 'scripts', 'start.vbs')], {
+        spawn('wscript.exe', [path.join(__dirname, '..', 'start.vbs')], {
           detached: true, stdio: 'ignore', windowsHide: true,
         }).unref()
         app.quit()

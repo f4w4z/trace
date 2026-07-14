@@ -7,6 +7,21 @@ commands, git activity, clipboard snippets, and media playback), indexes it loca
 dashboard, and a REST / MCP API. Nothing leaves your machine unless you point it at an external
 LLM.
 
+## Project structure
+
+| Path | What it is |
+| --- | --- |
+| `setup.bat` / `setup.mjs` | First-run installer — animated, interactive CLI that checks prerequisites, wires up your AI key, installs dependencies, builds, and starts Trace. |
+| `start.vbs` | Windows launcher — auto-elevates, cleans up stale processes, starts the Docker service, and opens the Electron app. |
+| `stop.vbs` | Windows teardown — stops the Electron app and Docker service. |
+| `src/` | The core **backend daemon** (TypeScript). `index.ts` is the entry point; compiled to `dist/`. Contains the capture watchers (`daemon/`), REST/MCP API (`api/`), HUD server (`hud/`), and shared utilities (`utils/`, `services/`, `shared/`). |
+| `app/` | The **Electron desktop client** (`main.cjs`, preload, renderer, tray, splash, assets). |
+| `hud-ui/` | The **HUD web UI** — the Alt+X overlay, served at runtime by `src/hud`. |
+| `site/` | Standalone **landing/marketing page** (`index.html`). |
+| `test/` | **Automated test suite** (`*.test.ts`), run with `npm test`. |
+| `.github/` | CI workflow (`.github/workflows/ci.yml`). |
+| Config files | `docker-compose.yml`, `Dockerfile`, `electron-builder.yml`, `tsconfig.json`, `.env.example` at the root. |
+
 ## Why
 
 Every time you ask an AI about your work, it starts blank — it has no idea what files you edited,
@@ -78,8 +93,8 @@ npm run build && npm start  # compiled output
 npm run app                 # launches app/main.cjs
 ```
 
-On Windows, double-click **`scripts/start.vbs`** to auto-elevate, clean up stale processes, start the
-Docker container, and launch the Electron app in one shot. **`scripts/stop.vbs`** tears everything down.
+On Windows, double-click **`start.vbs`** to auto-elevate, clean up stale processes, start the
+Docker container, and launch the Electron app in one shot. **`stop.vbs`** tears everything down.
 
 ---
 
@@ -172,7 +187,7 @@ docker compose down           # stop
 docker compose logs -f        # follow logs
 ```
 
-On Windows, `scripts/start.vbs` manages the full lifecycle (elevate → kill stale processes →
+On Windows, `start.vbs` manages the full lifecycle (elevate → kill stale processes →
 `docker compose up -d` → launch Electron).
 
 ---

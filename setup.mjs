@@ -7,7 +7,7 @@ import os from "os";
 import readline from "readline";
 import { fileURLToPath } from "url";
 
-const ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
+const ROOT = path.dirname(fileURLToPath(import.meta.url));
 const LOG = path.join(ROOT, "setup.log");
 
 // ── Color palette (ANSI) ────────────────────────────────────────────────
@@ -412,7 +412,7 @@ async function buildImage() {
 
 function launch() {
   try {
-    spawn("wscript.exe", [path.join(ROOT, "scripts", "start.vbs")], {
+    spawn("wscript.exe", [path.join(ROOT, "start.vbs")], {
       cwd: ROOT,
       shell: true,
       windowsHide: true,

@@ -363,6 +363,7 @@ function setupConfig() {
 }
 
 async function setupKey() {
+  stopSpinner();
   if (hasDockerKey()) {
     const d = readDockerKey();
     const model = configureLLM(d.name, d.key);

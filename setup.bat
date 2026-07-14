@@ -91,19 +91,19 @@ echo.
 cd /d "%ROOT%"
 if not exist package.json ( echo   [ERR] Run from the trace repo root. & exit /b 1 )
 
-echo   [1/5] Checking Node.js...
+echo   [1/6] Checking Node.js...
 call :check_node
 if errorlevel 1 exit /b 1
 
-echo   [2/5] Checking Git...
+echo   [2/6] Checking Git...
 call :check_git
 
-echo   [3/5] Checking Docker...
+echo   [3/6] Checking Docker...
 call :check_docker
 if errorlevel 1 exit /b 1
 
 echo.
-echo   [4/5] Installing dependencies and building...
+echo   [4/6] Installing dependencies and building...
 call npm install
 if errorlevel 1 ( echo   [ERR] npm install failed. & exit /b 1 )
 echo   [OK]  npm packages installed
@@ -112,7 +112,7 @@ if errorlevel 1 ( echo   [ERR] TypeScript build failed. Run: npm run lint & exit
 echo   [OK]  Built to dist/
 
 echo.
-echo   [5/5] Configuring .env...
+echo   [5/6] Configuring .env...
 if not exist "%ROOT%\.env" (
     if exist "%ROOT%\.env.example" (
         copy "%ROOT%\.env.example" "%ROOT%\.env" >nul
@@ -130,6 +130,15 @@ if defined LLM_API_KEY call :set_env_key LLM_API_KEY "%LLM_API_KEY%"
 if defined WATCH_PATHS call :set_env_key WATCH_PATHS "%WATCH_PATHS%"
 echo   [OK]  .env configured
 
+echo.
+echo   [6/6] Configuring .env.docker...
+if not exist "%ROOT%\.env.docker" (
+    echo # Docker-specific env overrides> "%ROOT%\.env.docker"
+    echo   [OK]  Created .env.docker
+) else (
+    echo   [OK]  .env.docker already exists
+)
+
 :: Fall through to start
 goto :do_start
 
@@ -143,6 +152,18 @@ echo    Launching trace...
 echo   ===============================================
 echo.
 cd /d "%ROOT%"
+
+:: Ensure .env exists (start.vbs can be run without setup.bat)
+if not exist "%ROOT%\.env" (
+    if exist "%ROOT%\.env.example" (
+        copy "%ROOT%\.env.example" "%ROOT%\.env" >nul
+        echo   [OK]  Created .env from .env.example
+    )
+)
+:: Ensure .env.docker exists (docker-compose.yml requires it)
+if not exist "%ROOT%\.env.docker" (
+    echo # Docker-specific env overrides> "%ROOT%\.env.docker"
+)
 
 echo   -> Starting Supermemory Local (Docker^)...
 docker compose up -d --build >nul 2>&1

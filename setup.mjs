@@ -161,6 +161,7 @@ function promptSecret(text) {
   return new Promise((resolve) => {
     process.stdout.write(`  ${text} `);
     readline.emitKeypressEvents(process.stdin);
+    process.stdin.resume();
     process.stdin.setRawMode(true);
     let val = "";
     const onKey = (str, key) => {
@@ -178,9 +179,19 @@ function promptSecret(text) {
         cleanup();
         process.stdout.write("\n");
         process.exit(1);
-      } else if (str && str.length === 1 && !key.ctrl && !key.meta) {
-        val += str;
-        process.stdout.write(C.dim + "•" + C.reset);
+      } else if (str && !key.ctrl && !key.meta) {
+        // Handles both single keystrokes and pasted (multi-char) input.
+        const hasNewline = str.includes("\r") || str.includes("\n");
+        for (const ch of str) {
+          if (ch === "\r" || ch === "\n") continue;
+          val += ch;
+          process.stdout.write(C.dim + "•" + C.reset);
+        }
+        if (hasNewline) {
+          cleanup();
+          process.stdout.write("\n");
+          resolve(val);
+        }
       }
     };
     const cleanup = () => {

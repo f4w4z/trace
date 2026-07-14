@@ -36,6 +36,10 @@ window.trace.username().then(name => {
 
 window.trace.onFocusSearch(() => {
   setTimeout(() => input.focus(), 50)
+  const now = Date.now()
+  if (now - lastSummaryTime > 15 * 60 * 1000) {
+    pollSummary()
+  }
 })
 
 window.trace.onBlurHide(() => {
@@ -237,6 +241,7 @@ async function loadInitialState() {
 let eventsKey = ''
 let lastSummary = null
 let pollingSummary = false
+let lastSummaryTime = 0
 
 async function pollEvents() {
   const data = await withTimeout(window.trace.api('GET', '/context/current'), 10000)
@@ -279,10 +284,12 @@ async function pollSummary() {
     if (!chatMode) document.getElementById('summary-loading').classList.remove('visible')
     if (!data.text) {
       summary.classList.remove('visible')
+      lastSummaryTime = Date.now()
       pollingSummary = false
       return
     }
     lastSummary = data
+    lastSummaryTime = Date.now()
     if (!chatMode) renderSummary(data)
   } catch (err) {
     console.error('Failed to poll summary, retrying in 3s:', err)
@@ -306,7 +313,6 @@ loadInitialState()
 pollEvents()
 pollSummary()
 setInterval(pollEvents, 5000)
-setInterval(pollSummary, 300000)
 
 // ---- chat ----
 

@@ -13,7 +13,7 @@ setlocal EnableDelayedExpansion
 ::
 ::  Optional env overrides (set before running):
 ::    set LLM_URL=https://openrouter.ai/api/v1
-::    set LLM_MODEL=meta-llama/llama-3.3-70b-instruct:free
+::    set LLM_MODEL=google/gemma-4-31b-it:free
 ::    set LLM_API_KEY=sk-or-v1-...
 ::    set WATCH_PATHS=C:\Projects;D:\Work
 :: ============================================================

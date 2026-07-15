@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>trace - docs</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #0a0a0a;
+  color: #d4d4d4;
+  font-family: 'Inter', sans-serif;
+  font-weight: 400;
+  font-size: 14px;
+  line-height: 1.7;
+  padding: 80px 60px;
+  max-width: 1320px;
+  margin: 0 auto;
+}
+.desc { font-size: 14px; color: #888; max-width: 720px; }
+header { margin-bottom: 56px; }
+h1 {
+  font-size: 20px;
+  font-weight: 500;
+  color: #f0f0f0;
+  letter-spacing: -0.3px;
+  margin-bottom: 12px;
+}
+h1 span { font-weight: 300; color: #555; }
+p { color: #888; max-width: 720px; }
+a { color: #999; text-decoration: none; border-bottom: 1px solid #222; }
+a:hover { color: #d4d4d4; border-color: #555; }
+code {
+  font-family: 'Inter', monospace;
+  font-size: 12.5px;
+  background: #111;
+  padding: 1px 6px;
+  border-radius: 3px;
+  color: #b0b0b0;
+}
+.section {
+  margin-bottom: 56px;
+}
+.section-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: #3a3a3a;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  margin-bottom: 20px;
+}
+.arch-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 32px;
+  margin-top: 16px;
+}
+.arch-item {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.arch-item .label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: #555;
+  letter-spacing: 1px;
+}
+.arch-item .desc { font-size: 13px; color: #999; line-height: 1.6; }
+.endpoint {
+  font-size: 12.5px;
+  color: #777;
+  padding: 4px 0;
+  font-family: 'Inter', monospace;
+}
+.endpoint-group {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid #121212;
+}
+footer {
+  margin-top: 80px;
+  padding-top: 20px;
+  border-top: 1px solid #121212;
+  font-size: 12px;
+  color: #444;
+}
+
+@media (max-width: 960px) {
+  .arch-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 24px;
+  }
+}
+@media (max-width: 768px) {
+  body {
+    padding: 40px 24px;
+  }
+  .arch-grid {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+}
+</style>
+</head>
+<body>
+
+<header>
+<h1>trace <span>docs</span></h1>
+<p><a href="index.html">&larr; Back to home</a></p>
+</header>
+
+<div class="section">
+<div class="section-label">MCP integration</div>
+<p class="desc">Point your agent at <code>POST /mcp</code> with a tool name and args. Works with OpenCode, Claude Code, Cursor, and any MCP-compatible client.</p>
+<div class="endpoint">{ "tool": "search_context", "args": { "q": "what was I working on yesterday", "llm": true } }</div>
+<div class="endpoint-group">
+<div class="endpoint">get_current_context · search_context · get_day_context</div>
+<div class="endpoint">get_recent_files · recall_by_project · get_timeline_range</div>
+<div class="endpoint">get_topics · predict_context</div>
+</div>
+</div>
+
+<div class="section">
+<div class="section-label">API</div>
+<p class="desc">All endpoints return JSON. The server runs on port 6768.</p>
+<div class="endpoint">GET /context/current: active project, recent events, current session</div>
+<div class="endpoint">GET /context/query?q=...&llm=true: search memories with optional AI answer</div>
+<div class="endpoint">GET /context/chat?q=...: free-form AI chat (no activity context)</div>
+<div class="endpoint">GET /context/summary?since=...: LLM summary of recent activity</div>
+<div class="endpoint">GET /context/day?date=2026-07-11: full day with sessions grouped by project</div>
+<div class="endpoint">GET /context/recent-files?limit=20: most recently touched files</div>
+<div class="endpoint">GET /context/project?project=...: all memories for a project</div>
+<div class="endpoint">GET /context/timeline?start=ISO&end=ISO: every event in a time range</div>
+<div class="endpoint">GET /context/topics?limit=8: emergent topics clustered from activity</div>
+<div class="endpoint">GET /context/predict?project=&path=: proactively relevant memories + files</div>
+<div class="endpoint">GET /health: service health and Supermemory status</div>
+<div class="endpoint">GET /admin/status: daemon + Supermemory status</div>
+<div class="endpoint">POST /admin/daemon/pause: pause activity capture</div>
+<div class="endpoint">POST /admin/daemon/resume: resume activity capture</div>
+<div class="endpoint">POST /admin/compact: gzip old JSONL archives</div>
+<div class="endpoint">DELETE /admin/memories: clear all stored events</div>
+<div class="endpoint" style="margin-top:10px;color:#888;">POST /mcp · GET /mcp/tools: AI agent integration</div>
+</div>
+
+<div class="section">
+<div class="section-label">Configuration</div>
+<p class="desc">Copy <code>.env.example</code> to <code>.env</code>. The server reads these variables at startup:</p>
+<div class="endpoint">SUPERMEMORY_URL: http://localhost:6767 (default)</div>
+<div class="endpoint">SUPERMEMORY_API_KEY: printed on first supermemory boot</div>
+<div class="endpoint">CONTAINER_TAG: namespace for your memories (default: trace)</div>
+<div class="endpoint">WATCH_SOURCES: comma-separated: filesystem, browser, editor, terminal, clipboard</div>
+<div class="endpoint">WATCH_PATHS: semicolon-separated directories to monitor</div>
+<div class="endpoint">CHROME_HISTORY / EDGE_HISTORY / BRAVE_HISTORY: browser history paths (OS default)</div>
+<div class="endpoint">SHELL_HISTORY: terminal history path (PowerShell PSReadLine default)</div>
+<div class="endpoint">API_PORT: context API port (default: 6768)</div>
+<div class="endpoint">HUD_PORT: web HUD port (default: 6769)</div>
+<div class="endpoint">DIGEST_HOUR: local hour (0–23) to write the daily digest (default: 21)</div>
+<div class="endpoint">AUTO_UPDATE_CHECK: poll UPDATE_URL for newer releases (default: true)</div>
+<div class="endpoint">UPDATE_URL: JSON endpoint returning { version, url, notes }</div>
+<div class="endpoint">LLM_URL / LLM_MODEL / LLM_API_KEY: for AI-powered Q&amp;A</div>
+</div>
+
+<div class="section">
+<div class="section-label">Supermemory</div>
+<p class="desc">Trace uses <a href="https://supermemory.ai">Supermemory Local</a> as its remote memory backend. Supermemory handles chunking, embedding, vector storage, and hybrid search. It runs as a single binary on localhost:6767, inside WSL on Windows. Configure it with your preferred LLM provider for automatic memory extraction:</p>
+<div class="endpoint">OPENAI_BASE_URL=https://openrouter.ai/api/v1</div>
+<div class="endpoint">OPENAI_API_KEY=sk-or-v1-...</div>
+<div class="endpoint">OPENAI_MODEL=google/gemma-4-31b-it:free</div>
+<p class="desc" style="margin-top:12px;">Supermemory's memory agent workflow extracts facts from each document, enabling semantic search and user profile building over time. When no LLM is configured, documents are still indexed for vector search, but the memory agent is skipped.</p>
+</div>
+
+<div class="section">
+<div class="section-label">Resilience</div>
+<div class="arch-grid">
+<div class="arch-item"><div class="label">Watchdog</div><div class="desc"><code>npm run watchdog</code> runs a supervisor that restarts the server on unexpected exit. Crash-loop protection: max 5 restarts per minute.</div></div>
+<div class="arch-item"><div class="label">Auto-update</div><div class="desc">When <code>AUTO_UPDATE_CHECK=true</code> and <code>UPDATE_URL</code> is set, trace polls for a newer version and logs the result. Set <code>AUTO_UPDATE_DOWNLOAD=true</code> to also fetch the release asset into <code>./release</code>.</div></div>
+<div class="arch-item"><div class="label">Installer</div><div class="desc"><code>install.ps1</code> (Windows) and <code>install.sh</code> (WSL/Linux) install deps, build, configure <code>.env</code>, start Supermemory, and launch trace under the watchdog in one command.</div></div>
+<div class="arch-item"><div class="label">Binaries</div><div class="desc">The Electron overlay packages via <code>electron-builder</code> (<code>npm run dist:app</code>, produces <code>release/Trace Setup*.exe</code>). The server can be run via <code>node dist/index.js</code> or <code>npm run watchdog</code>.</div></div>
+</div>
+</div>
+
+<footer>
+<p><a href="index.html">Home</a> &middot; <a href="https://github.com/f4w4z/trace">GitHub</a> &middot; <a href="https://supermemory.ai">Supermemory</a></p>
+</footer>
+
+</body>
+</html>

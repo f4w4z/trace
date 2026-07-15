@@ -493,13 +493,24 @@ app.whenReady().then(async () => {
 
   ipcMain.handle('conversations-list', async () => {
     const data = loadConvs()
-    return data.conversations.map(c => ({
-      id: c.id,
-      title: c.title,
-      createdAt: c.createdAt,
-      messageCount: c.messages.length,
-      preview: c.messages.length > 0 ? (c.messages[0].text || '').slice(0, 80) : '',
-    }))
+    return data.conversations.map(c => {
+      let preview = ''
+      if (c.messages && c.messages.length > 1) {
+        for (let i = c.messages.length - 1; i > 0; i--) {
+          if (c.messages[i].role === 'user') {
+            preview = (c.messages[i].text || '').replace(/\r?\n/g, ' ').slice(0, 80)
+            break
+          }
+        }
+      }
+      return {
+        id: c.id,
+        title: c.title,
+        createdAt: c.createdAt,
+        messageCount: c.messages.length,
+        preview,
+      }
+    })
   })
 
   ipcMain.handle('conversation-get', async (_, id) => {

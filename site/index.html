@@ -132,6 +132,20 @@ footer {
   color: #444;
 }
 footer a { font-size: 12px; }
+.video-container {
+  margin: 32px 0 56px;
+  width: 100%;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid #1a1a1a;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+  background: #000;
+}
+.video-container video {
+  width: 100%;
+  height: auto;
+  display: block;
+}
 </style>
 </head>
 <body>
@@ -140,6 +154,12 @@ footer a { font-size: 12px; }
 <h1>trace <span>your memory, on your machine</span></h1>
 <p>Trace quietly remembers what you do on your computer: the files you touch, the tabs you open, the commands you run, and lets you ask about any of it later in plain language. Everything stays local. Nothing leaves your machine unless you point it at an AI.</p>
 </header>
+
+<div class="video-container">
+  <video src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/trace-demo-placeholder.mp4" autoplay loop muted playsinline>
+    Your browser does not support the video tag.
+  </video>
+</div>
 
 <div class="section">
 <div class="section-label">Why</div>

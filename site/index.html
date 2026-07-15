@@ -16,10 +16,11 @@ body {
   font-weight: 400;
   font-size: 14px;
   line-height: 1.7;
-  padding: 80px 24px;
-  max-width: 680px;
+  padding: 80px 40px;
+  max-width: 1100px;
   margin: 0 auto;
 }
+.desc { font-size: 14px; color: #888; max-width: 680px; }
 header { margin-bottom: 56px; }
 h1 {
   font-size: 20px;
@@ -177,10 +178,10 @@ footer {
   transition: opacity 0.15s ease;
 }
 
-/* Feature List */
+/* Nice Stuff Grid */
 .feature-grid {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
   gap: 24px;
   margin-top: 16px;
 }
@@ -190,22 +191,20 @@ footer {
   border-radius: 10px;
   padding: 16px;
   display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: 24px;
+  flex-direction: column;
   transition: border-color 0.2s ease;
 }
 .feature-card:hover {
   border-color: #222;
 }
 .feature-card-video {
-  width: 240px;
+  width: 100%;
   aspect-ratio: 16/9;
-  flex-shrink: 0;
   border-radius: 6px;
   overflow: hidden;
   border: 1px solid #181818;
   background: #000;
+  margin-bottom: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -216,29 +215,21 @@ footer {
   object-fit: cover;
   display: block;
 }
-.feature-card-content {
-  flex: 1;
-}
 .feature-card-title {
-  font-size: 14px;
+  font-size: 13.5px;
   font-weight: 500;
   color: #e5e5e5;
   margin-bottom: 6px;
 }
 .feature-card-desc {
-  font-size: 12.5px;
-  color: #888;
+  font-size: 12px;
+  color: #666;
   line-height: 1.6;
 }
 
-@media (max-width: 600px) {
-  .feature-card {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 16px;
-  }
-  .feature-card-video {
-    width: 100%;
+@media (max-width: 768px) {
+  .feature-grid {
+    grid-template-columns: 1fr;
   }
 }
 </style>
@@ -264,34 +255,28 @@ footer {
 </div>
 
 <div class="section">
-  <div class="section-label">Features</div>
+  <div class="section-label">Nice stuff</div>
   <div class="feature-grid">
     <div class="feature-card">
       <div class="feature-card-video">
         <video src="https://p8awhhvegiu69vbs.public.blob.vercel-storage.com/trace-corners-nucfCTMN51RLwnH04fGStzBoi0oIq9.mp4" autoplay loop muted playsinline></video>
       </div>
-      <div class="feature-card-content">
-        <div class="feature-card-title">Refined Interface</div>
-        <div class="feature-card-desc">Sleek, rounded window corners and transparent glassmorphic overlay matching native OS aesthetics.</div>
-      </div>
+      <div class="feature-card-title">Refined Interface</div>
+      <div class="feature-card-desc">Sleek, rounded window corners and transparent glassmorphic overlay matching native OS aesthetics.</div>
     </div>
     <div class="feature-card">
       <div class="feature-card-video">
         <video src="https://p8awhhvegiu69vbs.public.blob.vercel-storage.com/trace-summary-Ms9OWSiHgtRbOSuORSRd7fbWOtG9RW.mp4" autoplay loop muted playsinline></video>
       </div>
-      <div class="feature-card-content">
-        <div class="feature-card-title">Daily Summary</div>
-        <div class="feature-card-desc">Automatic session summarization that digests what you worked on, apps used, and sites visited.</div>
-      </div>
+      <div class="feature-card-title">Daily Summary</div>
+      <div class="feature-card-desc">Automatic session summarization that digests what you worked on, apps used, and sites visited.</div>
     </div>
     <div class="feature-card">
       <div class="feature-card-video">
         <video src="https://p8awhhvegiu69vbs.public.blob.vercel-storage.com/trace-recentchats-N7AqPQHuf5hyi5UBghp7RtUUstdtbh.mp4" autoplay loop muted playsinline></video>
       </div>
-      <div class="feature-card-content">
-        <div class="feature-card-title">Conversation History</div>
-        <div class="feature-card-desc">Easily jump back into past logs, chat history, and context streams at any time.</div>
-      </div>
+      <div class="feature-card-title">Conversation History</div>
+      <div class="feature-card-desc">Easily jump back into past logs, chat history, and context streams at any time.</div>
     </div>
   </div>
 </div>

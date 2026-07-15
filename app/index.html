@@ -65,6 +65,19 @@ html, body {
   width: 26px; height: 26px;
   border-radius: 7px;
   flex-shrink: 0;
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+#search-logo:hover {
+  transform: scale(1.08);
+}
+#search-logo:active {
+  transform: scale(0.95);
+}
+#search-row:focus-within #search-logo {
+  transform: scale(1.15);
+}
+#search-row:focus-within #search-logo:active {
+  transform: scale(1.02);
 }
 #search-input {
   flex: 1;

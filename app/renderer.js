@@ -369,7 +369,7 @@ async function handleCommand(cmd) {
     return `<div class="cmd-help-list">${lines.join('<br>')}</div>`
   }
 
-  if (!COMMANDS[name]) {
+  if (!COMMANDS[name] && name !== 'slashsummaryregen' && name !== 'summaryregen') {
     return `Unknown command: <span class="cmd-name">/${name}</span>. Type <span class="cmd-name">/help</span> for available commands.`
   }
 
@@ -435,15 +435,47 @@ async function handleCommand(cmd) {
       showOnboarding()
       return 'Opened onboarding wizard.'
     }
+    case 'slashsummaryregen':
+    case 'summaryregen': {
+      const cmdEndIdx = cmd.indexOf(name) + name.length
+      let instruction = cmd.slice(cmdEndIdx).trim()
+      
+      if (instruction.startsWith('--')) {
+        instruction = instruction.slice(2).trim()
+      }
+      
+      if (!instruction) {
+        return 'Please provide a context instruction, e.g., <code class="inline-code">slashsummaryregen --dont mention any songs</code>'
+      }
+      
+      try {
+        const result = await window.trace.api('GET', `/context/summary?context=${encodeURIComponent(instruction)}`)
+        if (result && result.text) {
+          lastSummary = result
+          renderSummary(result)
+          return `<b>Summary regenerated with context:</b> "${escape(instruction)}"<br><br>${renderMarkdown(escape(result.text))}`
+        } else {
+          return 'Failed to regenerate summary (empty response).'
+        }
+      } catch (err) {
+        return `Error regenerating summary: ${escape(String(err))}`
+      }
+    }
     default:
       return `Unknown command: <span class="cmd-name">/${name}</span>`
   }
 }
 
 async function sendMessage() {
-  const q = input.value.trim()
+  let q = input.value.trim()
   if (!q) return
   input.value = ''
+
+  if (q.toLowerCase().startsWith('slashsummaryregen') || q.toLowerCase().startsWith('/slashsummaryregen') || q.toLowerCase().startsWith('/summaryregen')) {
+    if (!q.startsWith('/')) {
+      q = '/' + q
+    }
+  }
 
   if (q.trim() === '/new') {
     if (!chatMode) startNewConversation()

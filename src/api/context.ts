@@ -236,9 +236,9 @@ ${items || '(no matching events found)'}`
 
   private summaryCache: { text: string; stats: { apps: { name: string; events: number }[]; browsers: { app: string; titles: string[] }[]; files: string[]; total: number }; expiresAt: number } | null = null
 
-  async getSummary(since?: string): Promise<{ text: string; stats: { apps: { name: string; events: number }[]; browsers: { app: string; titles: string[] }[]; files: string[]; total: number }; cached: boolean }> {
+  async getSummary(since?: string, extraContext?: string): Promise<{ text: string; stats: { apps: { name: string; events: number }[]; browsers: { app: string; titles: string[] }[]; files: string[]; total: number }; cached: boolean }> {
     const now = Date.now()
-    if (!since && this.summaryCache && now < this.summaryCache.expiresAt) {
+    if (!since && !extraContext && this.summaryCache && now < this.summaryCache.expiresAt) {
       return { ...this.summaryCache, cached: true }
     }
 
@@ -275,10 +275,14 @@ ${items || '(no matching events found)'}`
     }
 
     const duration = since ? 'selected period' : 'last 2 hours'
-    const prompt = `The following is a raw log of the user's recent computer activity (${duration}). Summarize it in 2-4 concise, natural sentences. Mention key apps used, files worked on, and websites visited. Sound like a helpful assistant reporting what the user did.
+    let prompt = `The following is a raw log of the user's recent computer activity (${duration}). Summarize it in 2-4 concise, natural sentences. Mention key apps used, files worked on, and websites visited. Sound like a helpful assistant reporting what the user did.
 
 Activity:
 ${events.slice(0, 60).map(e => `[${e.source}] ${e.content}${e.metadata.app ? ` (${e.metadata.app})` : ''}`).join('\n')}`
+
+    if (extraContext) {
+      prompt += `\n\nCRITICAL ADDITIONAL INSTRUCTION for this summary: ${extraContext}`
+    }
 
     const llmUrl = process.env.LLM_URL
     const llmModel = process.env.LLM_MODEL
@@ -324,7 +328,9 @@ ${events.slice(0, 60).map(e => `[${e.source}] ${e.content}${e.metadata.app ? ` (
       text = summaryText
     }
 
-    this.summaryCache = { text, stats, expiresAt: now + 5 * 60 * 1000 }
+    if (!since && !extraContext) {
+      this.summaryCache = { text, stats, expiresAt: now + 5 * 60 * 1000 }
+    }
     return { text, stats, cached: false }
   }
 

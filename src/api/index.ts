@@ -77,7 +77,8 @@ export function createApi(config: Config, supermemory: SupermemoryClient, daemon
   app.get('/context/summary', async (req: Request, res: Response) => {
     try {
       const since = req.query.since as string | undefined
-      const result = await context.getSummary(since)
+      const contextParam = req.query.context as string | undefined
+      const result = await context.getSummary(since, contextParam)
       res.json(result)
     } catch (err) {
       res.status(500).json({ error: String(err) })

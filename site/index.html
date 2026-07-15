@@ -131,9 +131,38 @@ footer {
   font-size: 12px;
   color: #444;
 }
-footer a { font-size: 12px; }
-.video-container {
-  margin: 32px 0 56px;
+.demo-showcase {
+  margin: 32px 0 40px;
+  width: 100%;
+}
+.demo-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid #1c1c1c;
+  padding-bottom: 8px;
+}
+.demo-tab {
+  background: transparent;
+  border: none;
+  color: #666;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 6px 12px;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+.demo-tab:hover {
+  color: #aaa;
+  background: rgba(255,255,255,0.03);
+}
+.demo-tab.active {
+  color: #f0f0f0;
+  background: rgba(255,255,255,0.06);
+}
+.demo-player {
   width: 100%;
   border-radius: 12px;
   overflow: hidden;
@@ -141,10 +170,66 @@ footer a { font-size: 12px; }
   box-shadow: 0 20px 40px rgba(0,0,0,0.6);
   background: #000;
 }
-.video-container video {
+.demo-player video {
   width: 100%;
   height: auto;
   display: block;
+  transition: opacity 0.15s ease;
+}
+
+/* Feature Grid */
+.feature-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  margin-top: 16px;
+}
+.feature-card {
+  background: #0d0d0d;
+  border: 1px solid #151515;
+  border-radius: 10px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  transition: border-color 0.2s ease;
+}
+.feature-card:hover {
+  border-color: #222;
+}
+.feature-card-video {
+  width: 100%;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid #181818;
+  background: #000;
+  margin-bottom: 12px;
+  aspect-ratio: 16/9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.feature-card-video video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.feature-card-title {
+  font-size: 13.5px;
+  font-weight: 500;
+  color: #e5e5e5;
+  margin-bottom: 6px;
+}
+.feature-card-desc {
+  font-size: 12px;
+  color: #666;
+  line-height: 1.6;
+}
+
+@media (max-width: 640px) {
+  .feature-grid {
+    grid-template-columns: 1fr;
+  }
 }
 </style>
 </head>
@@ -155,10 +240,44 @@ footer a { font-size: 12px; }
 <p>Trace quietly remembers what you do on your computer: the files you touch, the tabs you open, the commands you run, and lets you ask about any of it later in plain language. Everything stays local. Nothing leaves your machine unless you point it at an AI.</p>
 </header>
 
-<div class="video-container">
-  <video src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/trace-demo-placeholder.mp4" autoplay loop muted playsinline>
-    Your browser does not support the video tag.
-  </video>
+<div class="demo-showcase">
+  <div class="demo-tabs">
+    <button class="demo-tab active" onclick="switchVideo(0)">Ask AI</button>
+    <button class="demo-tab" onclick="switchVideo(1)">Recall Memories</button>
+    <button class="demo-tab" onclick="switchVideo(2)">Quick Setup</button>
+  </div>
+  <div class="demo-player">
+    <video id="main-video" src="https://p8awhhvegiu69vbs.public.blob.vercel-storage.com/trace-aidemo-final-pHGZu1US6MP4YBt6h7126bKKW9ifK3.mov" autoplay loop muted playsinline controls>
+      Your browser does not support the video tag.
+    </video>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-label">Features</div>
+  <div class="feature-grid">
+    <div class="feature-card">
+      <div class="feature-card-video">
+        <video src="https://p8awhhvegiu69vbs.public.blob.vercel-storage.com/trace-corners-sgbff4q814wUlJL6rYe5C776k6bFJO.mp4" autoplay loop muted playsinline></video>
+      </div>
+      <div class="feature-card-title">Refined Interface</div>
+      <div class="feature-card-desc">Sleek, rounded window corners and transparent glassmorphic overlay matching native OS aesthetics.</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-card-video">
+        <video src="https://p8awhhvegiu69vbs.public.blob.vercel-storage.com/trace-summary-Ms9OWSiHgtRbOSuORSRd7fbWOtG9RW.mp4" autoplay loop muted playsinline></video>
+      </div>
+      <div class="feature-card-title">Daily Summary</div>
+      <div class="feature-card-desc">Automatic session summarization that digests what you worked on, apps used, and sites visited.</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-card-video">
+        <video src="https://p8awhhvegiu69vbs.public.blob.vercel-storage.com/trace-recentchats-v1TLfrclZ20wWAX3N65cchykpY6AQN.mp4" autoplay loop muted playsinline></video>
+      </div>
+      <div class="feature-card-title">Conversation History</div>
+      <div class="feature-card-desc">Easily jump back into past logs, chat history, and context streams at any time.</div>
+    </div>
+  </div>
 </div>
 
 <div class="section">
@@ -293,5 +412,33 @@ footer a { font-size: 12px; }
 <p><a href="https://github.com/f4w4z/trace">GitHub</a> &middot; <a href="https://supermemory.ai">Supermemory</a></p>
 </footer>
 
+<script>
+  const videoUrls = [
+    "https://p8awhhvegiu69vbs.public.blob.vercel-storage.com/trace-aidemo-final-pHGZu1US6MP4YBt6h7126bKKW9ifK3.mov",
+    "https://p8awhhvegiu69vbs.public.blob.vercel-storage.com/trace-noai-demo-afHlcQ7RyL9MQnmkLTOpq0bBIhZ4xR.mov",
+    "https://p8awhhvegiu69vbs.public.blob.vercel-storage.com/trace-onboarding-B8jtnGQssEUmrejL7mySkl8kkSd9Mp.mp4"
+  ];
+  
+  function switchVideo(index) {
+    const video = document.getElementById('main-video');
+    const tabs = document.querySelectorAll('.demo-tab');
+    
+    // Update active tab button
+    tabs.forEach((tab, i) => {
+      if (i === index) tab.classList.add('active');
+      else tab.classList.remove('active');
+    });
+    
+    // Fade out effect
+    video.style.opacity = 0.4;
+    
+    setTimeout(() => {
+      video.src = videoUrls[index];
+      video.load();
+      video.play().catch(e => console.log('Autoplay blocked:', e));
+      video.style.opacity = 1;
+    }, 150);
+  }
+</script>
 </body>
 </html>

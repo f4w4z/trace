@@ -329,7 +329,7 @@ ${events.slice(0, 60).map(e => `[${e.source}] ${e.content}${e.metadata.app ? ` (
     }
 
     if (!since && !extraContext) {
-      this.summaryCache = { text, stats, expiresAt: now + 5 * 60 * 1000 }
+      this.summaryCache = { text, stats, expiresAt: now + 15 * 60 * 1000 }
     }
     return { text, stats, cached: false }
   }

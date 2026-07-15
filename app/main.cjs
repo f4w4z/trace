@@ -335,30 +335,34 @@ function toggleWindow() {
 }
 
 function createTray(theme) {
-  const isLight = theme === 'light'
-  const logoName = isLight ? 'logo-lightmode.png' : 'logo-darkmode.png'
-  const iconPath = path.join(__dirname, 'assets', logoName)
-  let icon
-  try { icon = nativeImage.createFromPath(iconPath).resize({ width: 16, height: 16 }) } catch {}
-  if (!icon || icon.isEmpty()) icon = nativeImage.createEmpty()
-  
-  if (tray) {
-    tray.setImage(icon)
-  } else {
-    tray = new Tray(icon)
-    tray.setToolTip('trace — Context Search')
-    tray.setContextMenu(Menu.buildFromTemplate([
-      { label: 'Show (Alt+X)', click: toggleWindow },
-      { type: 'separator' },
-      {
-        label: 'Quit',
-        click: () => {
-          app.isQuitting = true
-          app.quit()
+  try {
+    const isLight = theme === 'light'
+    const logoName = isLight ? 'logo-lightmode.png' : 'logo-darkmode.png'
+    const iconPath = path.join(__dirname, 'assets', logoName)
+    let icon
+    try { icon = nativeImage.createFromPath(iconPath).resize({ width: 16, height: 16 }) } catch {}
+    if (!icon || icon.isEmpty()) icon = nativeImage.createEmpty()
+    
+    if (tray) {
+      tray.setImage(icon)
+    } else {
+      tray = new Tray(icon)
+      tray.setToolTip('trace — Context Search')
+      tray.setContextMenu(Menu.buildFromTemplate([
+        { label: 'Show (Alt+X)', click: toggleWindow },
+        { type: 'separator' },
+        {
+          label: 'Quit',
+          click: () => {
+            app.isQuitting = true
+            app.quit()
+          },
         },
-      },
-    ]))
-    tray.on('click', toggleWindow)
+      ]))
+      tray.on('click', toggleWindow)
+    }
+  } catch (err) {
+    console.error('Failed to create/update tray:', err.message)
   }
 }
 
@@ -419,16 +423,21 @@ app.whenReady().then(async () => {
   ipcMain.handle('get-settings', async () => loadSettings())
 
   ipcMain.handle('save-settings', async (_, settings) => {
-    const success = saveSettings(settings)
-    if (success && settings && settings.theme) {
-      createTray(settings.theme)
-      if (win) {
-        const logoName = settings.theme === 'light' ? 'logo-lightmode.png' : 'logo-darkmode.png'
-        const iconPath = path.join(__dirname, 'assets', logoName)
-        try { win.setIcon(nativeImage.createFromPath(iconPath)) } catch {}
+    try {
+      const success = saveSettings(settings)
+      if (success && settings && settings.theme) {
+        createTray(settings.theme)
+        if (win) {
+          const logoName = settings.theme === 'light' ? 'logo-lightmode.png' : 'logo-darkmode.png'
+          const iconPath = path.join(__dirname, 'assets', logoName)
+          try { win.setIcon(nativeImage.createFromPath(iconPath)) } catch {}
+        }
       }
+      return success
+    } catch (err) {
+      console.error('save-settings handler failed:', err)
+      return false
     }
-    return success
   })
 
   ipcMain.handle('set-run-at-startup', async (_, enable) => {

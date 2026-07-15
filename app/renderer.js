@@ -755,8 +755,16 @@ function initOnboarding() {
     getOnbEl('onb-done').disabled = true
     getOnbEl('onb-done').textContent = 'Saving...'
     onbData.onboarded = true
-    await window.trace.saveSettings(onbData)
-    if (onbData.runAtStartup) await window.trace.setRunAtStartup(true)
+    try {
+      await window.trace.saveSettings(onbData)
+    } catch (err) {
+      console.error('Failed to save settings:', err)
+    }
+    try {
+      if (onbData.runAtStartup) await window.trace.setRunAtStartup(true)
+    } catch (err) {
+      console.error('Failed to set run at startup:', err)
+    }
     applyTheme(onbData.theme)
     username = onbData.name
     renderGreeting()

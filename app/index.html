@@ -25,7 +25,7 @@ html, body {
   display: flex; flex-direction: column;
   overflow: hidden;
   border: 1px solid rgba(255,255,255,0.07);
-  box-shadow: 0 24px 80px rgba(0,0,0,0.55);
+  box-shadow: none; /* No shadow to prevent any translucent box/sharp corner artifacts */
   animation: popIn 0.18s cubic-bezier(0.16,1,0.3,1);
 }
 @keyframes popIn {
@@ -438,6 +438,8 @@ body.light .typing-dots span { background: rgba(0,0,0,0.4); }
   background: rgba(0,0,0,0.45);
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
+  border-radius: 16px;
+  overflow: hidden;
   animation: fadeIn 0.2s ease;
 }
 #onboarding-overlay.visible { display: flex; }

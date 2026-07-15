@@ -130,40 +130,11 @@ code {
   border-top: 1px solid #121212;
 }
 footer {
-  margin-top: 100px;
-  padding-top: 32px;
-  border-top: 1px solid #141414;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 16px;
-  flex-wrap: wrap;
-}
-footer .links {
-  display: flex;
-  gap: 24px;
-}
-footer a {
-  font-size: 13px;
-  color: #888;
-  border-bottom: none;
-  font-weight: 500;
-  transition: color 0.15s ease;
-}
-footer a:hover {
-  color: #f0f0f0;
-}
-footer .credits {
+  margin-top: 80px;
+  padding-top: 20px;
+  border-top: 1px solid #121212;
   font-size: 12px;
-  color: #333;
-}
-
-@media (max-width: 600px) {
-  footer {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 12px;
-  }
+  color: #444;
 }
 .demo-showcase {
   margin: 32px 0 40px;
@@ -198,6 +169,8 @@ footer .credits {
 }
 .demo-player {
   width: 100%;
+  border-radius: 12px;
+  overflow: hidden;
   background: #000;
 }
 .demo-player video {
@@ -221,6 +194,8 @@ footer .credits {
 .feature-card-video {
   width: 100%;
   aspect-ratio: 16/9;
+  border-radius: 8px;
+  overflow: hidden;
   background: #000;
   margin-bottom: 12px;
   display: flex;
@@ -382,12 +357,7 @@ footer .credits {
 </div>
 
 <footer>
-  <div class="links">
-    <a href="docs.html">API &amp; Docs</a>
-    <a href="https://github.com/f4w4z/trace">GitHub</a>
-    <a href="https://supermemory.ai">Supermemory</a>
-  </div>
-  <div class="credits">trace &middot; local activity context</div>
+<p><a href="docs.html">API &amp; Docs</a> &middot; <a href="https://github.com/f4w4z/trace">GitHub</a> &middot; <a href="https://supermemory.ai">Supermemory</a></p>
 </footer>
 
 <script>

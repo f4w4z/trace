@@ -177,18 +177,18 @@ footer {
   transition: opacity 0.15s ease;
 }
 
-/* Feature Grid */
+/* Feature List */
 .feature-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
   margin-top: 16px;
 }
 .feature-card {
   background: #0d0d0d;
   border: 1px solid #151515;
   border-radius: 10px;
-  padding: 16px;
+  padding: 20px;
   display: flex;
   flex-direction: column;
   transition: border-color 0.2s ease;
@@ -202,7 +202,7 @@ footer {
   overflow: hidden;
   border: 1px solid #181818;
   background: #000;
-  margin-bottom: 12px;
+  margin-bottom: 16px;
   aspect-ratio: 16/9;
   display: flex;
   align-items: center;
@@ -215,21 +215,15 @@ footer {
   display: block;
 }
 .feature-card-title {
-  font-size: 13.5px;
+  font-size: 14px;
   font-weight: 500;
   color: #e5e5e5;
   margin-bottom: 6px;
 }
 .feature-card-desc {
-  font-size: 12px;
-  color: #666;
+  font-size: 12.5px;
+  color: #888;
   line-height: 1.6;
-}
-
-@media (max-width: 640px) {
-  .feature-grid {
-    grid-template-columns: 1fr;
-  }
 }
 </style>
 </head>
@@ -242,12 +236,12 @@ footer {
 
 <div class="demo-showcase">
   <div class="demo-tabs">
-    <button class="demo-tab active" onclick="switchVideo(0)">Ask AI</button>
-    <button class="demo-tab" onclick="switchVideo(1)">Recall Memories</button>
+    <button class="demo-tab active" onclick="switchVideo(0)">Recall Memories</button>
+    <button class="demo-tab" onclick="switchVideo(1)">Ask AI</button>
     <button class="demo-tab" onclick="switchVideo(2)">Quick Setup</button>
   </div>
   <div class="demo-player">
-    <video id="main-video" src="https://p8awhhvegiu69vbs.public.blob.vercel-storage.com/trace-aidemo-final-pHGZu1US6MP4YBt6h7126bKKW9ifK3.mov" autoplay loop muted playsinline controls>
+    <video id="main-video" src="https://p8awhhvegiu69vbs.public.blob.vercel-storage.com/trace-noai-demo-afHlcQ7RyL9MQnmkLTOpq0bBIhZ4xR.mov" autoplay loop muted playsinline>
       Your browser does not support the video tag.
     </video>
   </div>
@@ -414,8 +408,8 @@ footer {
 
 <script>
   const videoUrls = [
-    "https://p8awhhvegiu69vbs.public.blob.vercel-storage.com/trace-aidemo-final-pHGZu1US6MP4YBt6h7126bKKW9ifK3.mov",
     "https://p8awhhvegiu69vbs.public.blob.vercel-storage.com/trace-noai-demo-afHlcQ7RyL9MQnmkLTOpq0bBIhZ4xR.mov",
+    "https://p8awhhvegiu69vbs.public.blob.vercel-storage.com/trace-aidemo-final-pHGZu1US6MP4YBt6h7126bKKW9ifK3.mov",
     "https://p8awhhvegiu69vbs.public.blob.vercel-storage.com/trace-onboarding-B8jtnGQssEUmrejL7mySkl8kkSd9Mp.mp4"
   ];
   

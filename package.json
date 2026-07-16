@@ -2,7 +2,12 @@
   "name": "trace",
   "version": "0.1.0",
   "description": "Local Context Cloud — OS-level memory layer using Supermemory Local (localhost:6767)",
-  "private": true,
+  "license": "MIT",
+  "author": "f4w4z",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/f4w4z/trace.git"
+  },
   "type": "module",
   "scripts": {
     "build": "tsc",

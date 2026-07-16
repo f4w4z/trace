@@ -1,5 +1,7 @@
 # trace — Local Context Cloud
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
 `trace` gives your AI assistants and coding tools a persistent memory of what you do on your
 computer. It continuously captures activity (foreground apps, browser tabs, file edits, terminal
 commands, git activity, clipboard snippets, and media playback), indexes it locally with
@@ -275,3 +277,19 @@ site/                   public landing page
   asset into `./release` (manual restart required to apply).
 - **Prebuilt desktop installer** — the Electron overlay packages with `electron-builder`
   (`npm run dist:app`, produces `release/Trace Setup*.exe`).
+
+---
+
+## Contributing
+
+Contributions are welcome! Please read the [Contributing Guide](CONTRIBUTING.md) before
+submitting a pull request. All contributors are expected to follow our
+[Code of Conduct](CODE_OF_CONDUCT.md).
+
+## Security
+
+To report a vulnerability, see [SECURITY.md](SECURITY.md).
+
+## License
+
+This project is licensed under the [MIT License](LICENSE).
